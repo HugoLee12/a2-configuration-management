@@ -24,6 +24,19 @@ Chiến lược này cố định xuyên suốt cả Giai đoạn thủ công l�
 Không push thẳng vào `main`; nhánh `main` được bảo vệ và sẽ từ chối.
 Mọi thay đổi vào `main` đi qua pull request.
 
+Commit không gắn với pull request nào thì luôn bị từ chối:
+
+```
+remote: error: GH006: Protected branch update failed for refs/heads/main.
+remote:
+remote: - Changes must be made through a pull request.
+```
+
+Có đúng một ngoại lệ.
+Nếu commit được push chính là head của một pull request đang mở, và pull request đó đã thoả mọi điều kiện của rule, GitHub nhận cú push và ghi nhận nó là merge của chính pull request ấy.
+Ngoại lệ này không phá quy ước, vì thay đổi vẫn đi qua một pull request nối về issue; nó chỉ khiến pull request bị merge mà không qua nút Merge trên giao diện, và bỏ mất phần mô tả merge do GitHub sinh.
+Vì vậy rule bảo vệ nhánh nên được hiểu là ràng buộc đường đi của một thay đổi, không phải một cái khoá tuyệt đối lên nhánh.
+
 Phần mô tả pull request phải chứa một dòng `Closes #<số-issue>` để GitHub nối pull request với issue và tự đóng issue khi merge.
 Nhờ đó truy được ngược từ một bản phát hành về commit, về pull request, rồi về yêu cầu thay đổi ban đầu.
 
