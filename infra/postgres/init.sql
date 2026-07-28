@@ -12,8 +12,12 @@ create table if not exists visits (
 );
 
 -- Số lượt đã tổng hợp. Worker thống kê là nơi duy nhất ghi vào bảng này.
--- Xoá theo link vì một mã không còn tồn tại thì số lượt của nó cũng vô nghĩa.
+-- Cố ý không có khoá ngoại tới links, dù nhìn qua thì đặt vào là hợp lý: worker
+-- rút hàng đợi và cộng dồn trong đúng một câu lệnh, nên một dòng visits trỏ tới
+-- mã vừa bị xoá sẽ làm cả chu kỳ bị huỷ rồi lặp lại y hệt mãi mãi, đóng băng số
+-- lượt của mọi mã chứ không riêng mã hỏng. #19 dọn link hết hạn thì dọn luôn
+-- dòng thống kê tương ứng.
 create table if not exists link_stats (
-  code        text primary key references links (code) on delete cascade,
+  code        text primary key,
   visit_count bigint not null default 0
 );

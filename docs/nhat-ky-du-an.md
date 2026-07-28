@@ -435,7 +435,7 @@ Ticket tiếp theo là #5 (B1), service thống kê lượt truy cập.
 
 Mỗi lần một mã ngắn được truy cập thì hệ ghi lại sự kiện, một worker tổng hợp các sự kiện đó theo chu kỳ, và số lượt của một mã tra cứu được qua API.
 
-Ràng buộc quan trọng nhất không nằm ở chỗ đếm được, mà ở chỗ **phần đếm không được nằm trên đường chuyển hướng**.
+Ràng buộc quan trọng nhất không nằm ở chỗ đếm được, mà ở chỗ **phần tổng hợp không được nằm trên đường chuyển hướng**.
 Dừng worker thì chuyển hướng vẫn phải chạy bình thường.
 Đây chính là yêu cầu số 32 trong danh sách của #1: sự cố ở nhánh phụ không được kéo sập chức năng chính.
 
@@ -502,7 +502,21 @@ Dựng hẳn cơ chế migration thì phình phạm vi ticket, và bản thân b
 
 Chỗ này ban đầu chỉ là một lần chạy hỏng, nhưng nhìn kỹ thì nó là bằng chứng cho đúng tiêu chí khó kiểm nhất của ticket.
 Lúc đó bảng `visits` không tồn tại, nghĩa là mỗi lần chuyển hướng đều có một câu lệnh SQL ném lỗi.
-Chuyển hướng vẫn 302, tạo link vẫn 201, vì lệnh ghi sự kiện được bọc `try/catch` và không ai chờ kết quả của nó.
+Chuyển hướng vẫn 302, tạo link vẫn 201, vì lệnh ghi sự kiện được bọc `try/catch` và lỗi của nó không đi tới người dùng.
+
+Nói cho chính xác thì việc **ghi** sự kiện vẫn nằm trên đường chuyển hướng: service `redirect` chờ câu lệnh `insert` xong rồi mới trả 302, nên mỗi lượt chuyển hướng gánh thêm một vòng đi về cơ sở dữ liệu.
+Cái được đẩy ra khỏi đường đó là việc **tổng hợp**, thứ tốn kém và cần chạy theo chu kỳ.
+Ghi kiểu bắn rồi quên sẽ nhanh hơn nhưng mất sự kiện mỗi khi tiến trình chết giữa chừng, và ở quy mô này thì một lần `insert` không đáng để đổi lấy chuyện đó.
+
+**Một khoá ngoại đúng sách vở suýt thành cái bẫy đóng băng toàn bộ thống kê.**
+
+Bảng `link_stats` ban đầu có `references links (code) on delete cascade`, vì một mã không còn tồn tại thì số lượt của nó cũng vô nghĩa.
+Soát lại mới thấy nó đá vào chính chỗ mạnh của cách tổng hợp: cả chu kỳ nằm trong một câu lệnh, nên nếu có một dòng `visits` trỏ tới mã vừa bị xoá thì câu lệnh đó hỏng, việc rút hàng đợi bị huỷ theo, và chu kỳ sau gặp lại đúng dòng ấy.
+Hỏng vĩnh viễn, và hỏng cho **mọi** mã chứ không riêng mã có vấn đề.
+
+Hôm nay chưa có đường nào xoá link nên chưa với tới được, nhưng #19 sinh ra đúng để dọn link hết hạn.
+Bỏ khoá ngoại đi, đổi lại là `link_stats` có thể còn sót dòng của mã đã xoá, thứ mà #19 dọn kèm được trong cùng một thao tác.
+Ghi lý do thẳng vào `init.sql`, vì đây là loại thiếu sót mà người đọc sau sẽ tưởng là quên rồi thêm lại.
 
 **Tiêu chí "dừng worker thì chuyển hướng vẫn chạy" không kiểm tự động được.**
 

@@ -1,5 +1,11 @@
 // Kiểm thử hộp đen: mọi request đi qua nginx đúng như người dùng thật.
 // Không import mã service, không nói chuyện thẳng với cơ sở dữ liệu.
+//
+// Tiêu chí "dừng worker thì chuyển hướng vẫn hoạt động" của #5 cố ý không có
+// test ở đây: worker không nằm sau nginx nên không với tới được từ seam này, và
+// #13 sẽ dùng lại chính bộ test này làm smoke test cho blue-green, nơi một test
+// tự dừng container là thứ không được phép tồn tại.
+// Tiêu chí đó kiểm bằng tay, log ghi ở docs/nhat-ky-du-an.md.
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -55,7 +61,7 @@ describe("thống kê lượt truy cập qua nginx", () => {
 
   it("mỗi lượt truy cập mã ngắn được cộng vào số lượt của chính mã đó", async () => {
     const code = await newCode();
-    const khac = await newCode();
+    const otherCode = await newCode();
 
     await visit(code);
     await visit(code);
@@ -63,7 +69,7 @@ describe("thống kê lượt truy cập qua nginx", () => {
 
     assert.equal(await waitForVisits(code, 3), 3);
     // Mã khác không ăn ké lượt của mã trên, kể cả sau khi worker đã chạy.
-    assert.equal(await readVisits(khac), 0);
+    assert.equal(await readVisits(otherCode), 0);
   });
 
   it("xem thống kê của mã không tồn tại thì báo lỗi rõ ràng", async () => {
