@@ -12,5 +12,5 @@ RUN npm ci --omit=dev
 
 COPY services/ services/
 
+# Không đặt CMD: chạy service nào là do `command` trong compose.yaml quyết định.
 USER node
-CMD ["node", "services/link/src/index.ts"]

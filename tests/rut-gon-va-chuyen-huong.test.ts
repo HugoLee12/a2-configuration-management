@@ -7,12 +7,25 @@ import { setTimeout as sleep } from "node:timers/promises";
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:8081";
 const READY_TIMEOUT_MS = 60_000;
 
+function createLink(body: unknown): Promise<Response> {
+  return fetch(`${BASE_URL}/api/v1/links`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Chờ tới khi service link thật sự trả lời qua nginx.
+ * Phải bắt đúng mã 400 chứ không phải "có trả lời là được": nginx hỏng upstream
+ * thì trả 502, còn cửa /api/ bị đấu nhầm sang service redirect thì trả 404, nên
+ * chỉ 400 mới chứng minh request đã đi tới đúng service.
+ */
 async function waitForStack(): Promise<void> {
   const deadline = Date.now() + READY_TIMEOUT_MS;
   for (;;) {
     try {
-      const res = await fetch(`${BASE_URL}/khong-ton-tai`);
-      if (res.status === 404) return;
+      if ((await createLink({})).status === 400) return;
     } catch {
       // stack chưa nhận kết nối
     }
@@ -23,19 +36,11 @@ async function waitForStack(): Promise<void> {
   }
 }
 
-async function createLink(url: string): Promise<Response> {
-  return fetch(`${BASE_URL}/api/links`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ url }),
-  });
-}
-
 describe("rút gọn link và chuyển hướng qua nginx", () => {
   before(waitForStack, { timeout: READY_TIMEOUT_MS + 5_000 });
 
   it("tạo link mới thì nhận về mã ngắn", async () => {
-    const res = await createLink("https://example.com/mot-duong-dan-rat-dai");
+    const res = await createLink({ url: "https://example.com/mot-duong-dan-rat-dai" });
     assert.equal(res.status, 201);
 
     const body = (await res.json()) as { code: string; shortUrl: string };
@@ -45,7 +50,7 @@ describe("rút gọn link và chuyển hướng qua nginx", () => {
 
   it("truy cập mã ngắn thì được chuyển hướng tới địa chỉ gốc", async () => {
     const url = "https://example.com/dich-den";
-    const { code } = (await (await createLink(url)).json()) as { code: string };
+    const { code } = (await (await createLink({ url })).json()) as { code: string };
 
     const res = await fetch(`${BASE_URL}/${code}`, { redirect: "manual" });
     assert.equal(res.status, 302);
@@ -61,11 +66,7 @@ describe("rút gọn link và chuyển hướng qua nginx", () => {
   });
 
   it("tạo link thiếu url thì bị từ chối", async () => {
-    const res = await fetch(`${BASE_URL}/api/links`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    const res = await createLink({});
     assert.equal(res.status, 400);
 
     const body = (await res.json()) as { error: string };

@@ -21,7 +21,9 @@ function generateCode(): string {
 const app = express();
 app.use(express.json());
 
-app.post("/api/links", async (req, res) => {
+// Số phiên bản nằm sẵn trong đường dẫn ngay từ v1, để #18 thêm được v2 chạy song
+// song mà không phải đổi đường dẫn cũ. Xem docs/adr/0002-he-thong-demo-va-stack.md.
+app.post("/api/v1/links", async (req, res) => {
   const url: unknown = req.body?.url;
   // Kiểm tra tối thiểu để không ghi rác vào cơ sở dữ liệu; validate địa chỉ đầy đủ thuộc về #6.
   if (typeof url !== "string" || url.trim() === "") {
