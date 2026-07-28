@@ -1,0 +1,8 @@
+{
+  "name": "@a2/stats",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "pg": "^8.16.0"
+  }
+}

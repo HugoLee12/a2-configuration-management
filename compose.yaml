@@ -44,6 +44,13 @@ services:
     command: ["node", "services/redirect/src/index.ts"]
     environment: *postgres-env
 
+  # Worker chạy nền, không có cổng và không nằm sau nginx: nó chỉ đọc bảng
+  # visits rồi cộng dồn vào link_stats theo chu kỳ.
+  stats:
+    <<: *service
+    command: ["node", "services/stats/src/index.ts"]
+    environment: *postgres-env
+
   nginx:
     image: nginx:1.29-alpine
     restart: unless-stopped

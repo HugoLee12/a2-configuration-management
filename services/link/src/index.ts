@@ -46,4 +46,23 @@ app.post("/api/v1/links", async (req, res) => {
   res.status(503).json({ error: "Không sinh được mã ngắn chưa dùng, thử lại" });
 });
 
+app.get("/api/v1/links/:code/stats", async (req, res) => {
+  // Đi từ bảng links để phân biệt được mã không tồn tại với mã tồn tại mà chưa
+  // có lượt nào: mã chưa có lượt thì worker thống kê chưa tạo dòng nào cho nó.
+  const { rows } = await pool.query<{ visit_count: string }>(
+    `select coalesce(link_stats.visit_count, 0) as visit_count
+       from links left join link_stats on link_stats.code = links.code
+      where links.code = $1`,
+    [req.params.code],
+  );
+  const stats = rows[0];
+  if (!stats) {
+    res.status(404).json({ error: "Mã ngắn không tồn tại" });
+    return;
+  }
+
+  // pg trả bigint về dạng chuỗi để không mất chính xác ở số lớn hơn 2^53.
+  res.json({ code: req.params.code, visits: Number(stats.visit_count) });
+});
+
 app.listen(3000);
