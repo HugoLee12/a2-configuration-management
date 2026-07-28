@@ -612,3 +612,96 @@ Nhận xét này dùng được cho báo cáo khi bàn về 25.3: một quy trì
 - `CONTRIBUTING.md` mục "Ngoại lệ: pull request ghi Nhật ký thủ công", `CLAUDE.md` mục Ràng buộc phải tôn trọng
 - Vòng đời thay đổi: issue #39 với pull request #40
 - Tiền lệ cùng dạng: #24 với pull request #25
+
+---
+
+## 2026-07-28 - Lần triển khai tay đầu tiên, và tài liệu tự làm hỏng nó
+
+**Ticket**: #41 (A11), và số đo được ghi trong pull request #42
+**Pull request**: #43
+**Phục vụ**: mục 25.2 System building và 25.4 Release management; đây là mẫu dữ liệu đầu tiên của Giai đoạn thủ công, và cũng là mẫu thất bại đầu tiên
+
+### Chuyện đã xảy ra
+
+#38 merge lúc `15:04`, đồng hồ bắt đầu lúc `15:13`, staging xanh lúc `15:15`.
+
+Prod thì đỏ.
+Bốn kiểm thử của #3 xanh, ba kiểm thử thống kê trả 500, và log của service `link` nói thẳng nguyên nhân:
+
+```
+error: relation "link_stats" does not exist
+```
+
+Bước 5 thiếu `docker compose --env-file env/prod.env down -v`.
+Volume của prod tạo từ #3 lúc `07:51:35Z` và chưa bao giờ bị xoá, mà Postgres chỉ chạy `init.sql` khi khởi tạo một volume rỗng, nên hai bảng mới không tồn tại dù image đã build lại đúng.
+Sửa bằng `down -v` rồi dựng lại, prod xanh lúc `15:18`.
+
+Tính theo định nghĩa trong `docs/trien-khai-thu-cong.md` thì đây là **một lần phát hành thất bại**, và nó vào change failure rate của Giai đoạn thủ công.
+
+### Vì sao lỗi này không phải lỗi thao tác
+
+Quy tắc `down -v` đã có sẵn trong tài liệu từ chính #5, ở ba chỗ: mục "Bảng lệnh", bước 3 và bước 5.
+Vậy mà nó vẫn bị bỏ sót, nên câu hỏi đúng không phải "ai quên" mà "vì sao tài liệu có mà vẫn quên".
+
+Câu trả lời nằm ở vị trí.
+Mục "Bảng lệnh" tự mô tả nó là "toàn bộ quy trình gói lại thành một khối chép được", nên cách dùng đúng của nó là chép cả khối ra dán vào terminal.
+Hai dòng nhắc điều kiện lại nằm **dưới** khối đó.
+Người chép khối sẽ đọc chúng sau khi đã gõ xong, tức là đọc để biết mình vừa làm sai chứ không phải để làm đúng.
+
+Cái sai ở đây là một cái bẫy do chính tài liệu bày ra: nó mời người đọc chép cả khối, rồi đặt điều kiện ở nơi hành vi đó không đi qua.
+
+### Đã sửa thế nào
+
+Hai dòng nhắc chuyển lên **trên** khối lệnh, và bản thân hai lệnh có điều kiện được đặt thẳng vào trong khối ở dạng dòng bị chú thích, đúng vị trí phải chạy.
+Chép cả khối bây giờ vẫn ra hành vi đúng cho trường hợp thường gặp, còn hai trường hợp có điều kiện thì chỉ cần bỏ dấu `#` chứ không phải nhớ ra rằng có một lệnh cần chèn và chèn vào đâu.
+
+Bước 1 có thêm một lệnh trả lời đúng câu hỏi quyết định:
+
+```sh
+git --no-pager show --stat HEAD
+```
+
+Trước đây người thao tác phải tự nhớ lần merge này đụng file nào, mà thời điểm cần nhớ lại là lúc đang đứng trước lệnh `up` ở bước 3.
+Bây giờ danh sách file hiện ra ngay ở bước 1, trước khi nó cần tới.
+
+Lệnh này không phải tự động hoá theo nghĩa mà `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` cấm: nó không gộp bước nào lại với nhau và không làm hộ bước nào, nó chỉ hiển thị thông tin.
+Ranh giới bị cấm là script gộp nhiều bước thành một lệnh, không phải việc nhìn vào kho mã.
+
+### Vì sao việc này thuộc về đề tài
+
+Đây là chỗ Giai đoạn thủ công bắt đầu trả cổ tức, sớm hơn dự tính.
+
+Luận điểm của đồ án cần chênh lệch số giữa hai giai đoạn, nhưng bản thân lần hỏng này còn nói được một điều mà bảng số không nói: quy trình thủ công hỏng ở chỗ **tài liệu**, chứ không hỏng ở chỗ máy móc.
+Một bước có điều kiện, chỉ áp dụng cho vài phần trăm số lần triển khai, phụ thuộc vào việc người thao tác nhớ ra đúng lúc, là loại bước mà con người sẽ bỏ sót còn máy thì không.
+Sang Giai đoạn pipeline, cùng ràng buộc đó sẽ nằm trong một bước của workflow và chạy hoặc không chạy theo điều kiện được viết ra, không theo trí nhớ ai cả.
+
+Đó là dẫn chứng cụ thể cho một câu mà nếu chỉ chép từ sách thì rất nhạt: giá trị của tự động hoá không nằm ở tốc độ mà nằm ở tính lặp lại được.
+Ở đây có cả hai vế đo được, năm phút và một lần hỏng, trên cùng một thay đổi.
+
+Còn một ý cho mục bàn về giới hạn của phép đo.
+Chi phí sửa tài liệu này không nằm trong đồng hồ, và cũng sẽ không có gì tương ứng ở Giai đoạn pipeline.
+Nó là chi phí thật của cách làm thủ công nhưng không được tính vào, nên chênh lệch giữa hai giai đoạn đang bị ước lượng **thấp hơn** thực tế chứ không phải cao hơn.
+
+### Một vết bẩn trong dữ liệu, đã ghi rõ chứ không giấu
+
+Dòng staging của #5 xanh, nhưng nó xanh vì volume staging đã bị xoá và dựng lại lúc `14:49:57Z`, trong lúc kiểm chứng khi phát triển, tức là trước khi đồng hồ chạy.
+Nếu lúc `15:13` volume staging còn nguyên như prod thì bước 4 đã đỏ y hệt.
+
+Nghĩa là dòng đó thiếu chi phí của bước xoá volume, và không so thẳng được với các lần triển khai sau.
+Đã ghi vào cột `Sự cố` và mục ghi chú của `docs/nhat-ky-thu-cong.md`, để #10 trừ hao chứ không phát hiện muộn.
+
+Bài học cho các ticket sau: việc kiểm chứng khi phát triển đụng vào chính môi trường sẽ được đo, nên nó phải được coi là một biến của phép đo chứ không phải chuyện bên lề.
+
+### Dẫn chứng
+
+- Số đo và hai ghi chú sự cố: `docs/nhat-ky-thu-cong.md`, mục "#5 staging" và "#5 prod"
+- Quy trình sau khi sửa: `docs/trien-khai-thu-cong.md` mục "Bảng lệnh" và bước 1
+- Vòng đời thay đổi: issue #41 với pull request #43
+- Lần triển khai được nói tới: pull request #38, merged lúc `2026-07-28T15:04:46Z`, commit `49460b4`
+
+### Đang ở đâu sau mục này
+
+Nhật ký thủ công có hai dòng và một lần phát hành thất bại.
+Quy trình đã bịt cái bẫy vừa lộ ra, nên lần triển khai của #6 sẽ là mẫu đầu tiên đo trên quy trình không còn lỗi đã biết.
+
+Ticket tiếp theo là #6 (B2), xác thực địa chỉ đầu vào.
