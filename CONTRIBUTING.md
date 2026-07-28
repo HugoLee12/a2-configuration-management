@@ -46,6 +46,25 @@ Việc bảo vệ vì vậy nằm ở chỗ bắt buộc pull request, không n�
 
 Merge bằng squash, để mỗi issue tương ứng đúng một commit trên `main`.
 
+## Ngoại lệ: pull request ghi Nhật ký thủ công
+
+Có đúng một loại pull request cố ý không mang dòng `Closes`, là loại chỉ thêm dòng vào `docs/nhat-ky-thu-cong.md`.
+
+Lý do nằm ở thứ tự thời gian.
+Số đo của một lần triển khai tay chỉ tồn tại **sau** khi thay đổi đã merge, mà đúng lúc merge thì issue tương ứng đã tự đóng.
+Nên tới lúc có số để ghi thì không còn issue nào để đóng nữa.
+
+Sâu hơn: bản ghi số đo không phải một thay đổi lên Hệ thống demo, nó là dữ liệu **về** một thay đổi đã xong.
+Nó không có lead time của riêng nó để tính, nên nó không phải mắt xích trong chuỗi truy vết mà `Closes` dựng ra.
+
+Thân pull request loại này ghi `Nhật ký thủ công cho #<số-issue>`, để vẫn truy ngược được về thay đổi đã đo, nhưng không ghi `Closes`.
+Dùng `Closes` ở đây sẽ gắn hai pull request vào cùng một issue, và khi #10 với #22 trích dữ liệu để tính lead time thì không còn xác định được đâu là lần merge đưa thay đổi vào `main`.
+
+Nhánh vẫn đặt tên theo số issue của thay đổi được đo, ví dụ `5-nhat-ky-thu-cong`.
+
+Ngoại lệ chỉ áp dụng cho pull request **chỉ** chạm `docs/nhat-ky-thu-cong.md`.
+Sửa kèm bất cứ file nào khác thì tách ra một issue riêng như thường lệ.
+
 ## Tiêu đề commit
 
 Tiêu đề commit viết bằng tiếng Việt có dấu, dạng câu mệnh lệnh, không quá 72 ký tự và không có dấu chấm cuối câu.

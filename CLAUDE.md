@@ -11,7 +11,7 @@ Repo này là đồ án A2 của học phần CNTT313E1 (Chuyên đề kỹ thu�
 - **Không dựng pipeline trong giai đoạn thủ công.** Đây là quyết định có chủ đích, xem `docs/adr/0003`. Đừng "sửa" giúp.
 - **Nghiệp vụ giữ tối giản.** Hệ demo tồn tại để pipeline có thứ để build và phát hành. Không thêm tính năng nghiệp vụ.
 - **Trunk-based xuyên suốt**, không đổi chiến lược nhánh giữa chừng vì sẽ làm hỏng phép so sánh.
-- **Mọi thay đổi đi qua issue rồi pull request**, theo `CONTRIBUTING.md`. Nhánh `main` được bảo vệ và từ chối push thẳng. Pull request thiếu dòng `Closes #<số>` sẽ làm gãy mắt xích truy vết dùng để tính lead time.
+- **Mọi thay đổi đi qua issue rồi pull request**, theo `CONTRIBUTING.md`. Nhánh `main` được bảo vệ và từ chối push thẳng. Pull request thiếu dòng `Closes #<số>` sẽ làm gãy mắt xích truy vết dùng để tính lead time, trừ đúng một ngoại lệ đã ghi trong `CONTRIBUTING.md` là pull request chỉ ghi Nhật ký thủ công.
 - **Ticket đóng thì thêm một mục vào `docs/nhat-ky-du-an.md`.** Đây là vật liệu để viết báo cáo và slide ở tuần 15, bỏ qua thì không dựng lại được.
 - Ngôn ngữ duy nhất là TypeScript; triển khai bằng Docker Compose, không Kubernetes, không PaaS.
 
