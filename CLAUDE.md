@@ -21,7 +21,8 @@ Repo này là đồ án A2 của học phần CNTT313E1 (Chuyên đề kỹ thu�
 Mã nguồn ở `services/`, hạ tầng ở `infra/` và `compose.yaml`, kiểm thử ở `tests/`.
 Cách dựng, cách chạy và hình dạng của hệ nằm ở `README.md`; đừng chép lại vào đây.
 
-Hiện mới có hai service, `link` và `redirect`; service thống kê thuộc về #5.
+Ba service là `link`, `redirect` và `stats`.
+`stats` là worker chạy nền, không phơi cổng và không nằm sau nginx, nên không có cách nào chạm tới nó bằng HTTP.
 
 Hai ràng buộc dễ vi phạm nếu không biết trước:
 
