@@ -177,3 +177,133 @@ Repo có: tài liệu bối cảnh và từ điển thuật ngữ, bốn ADR, qu
 
 Vẫn chưa có dòng nào của ba service TypeScript.
 Ticket tiếp theo là #3 (A2), chỗ bắt đầu viết mã của Hệ thống demo.
+
+---
+
+## 2026-07-28 - Đường đi đầu tiên xuyên toàn hệ, rút gọn link và chuyển hướng
+
+**Ticket**: #3 (A2)
+**Pull request**: #32
+**Phục vụ**: ô Kiến trúc 25% của Rubric; mục 25.2 System building và 25.4 Release management của báo cáo; đồng thời là vật thể để Giai đoạn thủ công có cái mà triển khai tay
+
+### Ticket đòi cái gì
+
+Một đường đi hoàn chỉnh xuyên toàn bộ hệ: người dùng gửi một địa chỉ dài, nhận về mã ngắn, truy cập mã ngắn thì được chuyển hướng tới địa chỉ gốc.
+
+Điểm quan trọng là chữ "xuyên toàn bộ".
+Đây là kiểu ticket mà tài liệu thường gọi là tracer bullet: thay vì làm xong hẳn một tầng rồi mới sang tầng sau, ta bắn một viên đạn mỏng chạm hết mọi tầng cùng lúc, để biết các tầng có ghép được với nhau không.
+Vì vậy nó phải chạm cơ sở dữ liệu, service quản lý vòng đời link, service chuyển hướng, nginx làm cửa vào, và bộ kiểm thử phải đi qua đúng cửa đó chứ không được đi tắt.
+
+Đây cũng là ticket đầu tiên của repo có mã nguồn.
+Bốn ticket trước đó đều chỉ đụng tới tài liệu và cấu hình.
+
+### Đã thay đổi những gì
+
+Hai service TypeScript trong `services/`.
+Service `link` nhận `POST /api/v1/links`, sinh một mã bảy ký tự, ghi vào Postgres, trả về mã và địa chỉ ngắn.
+Service `redirect` nhận `GET /<mã>`, tra Postgres, trả 302 tới địa chỉ gốc hoặc 404 nếu không có mã đó.
+
+Hai service này không gọi nhau; cả hai cùng nói chuyện với Postgres.
+Việc gọi nhau qua mạng sẽ xuất hiện ở #5, khi service thống kê ra đời.
+
+`infra/nginx/nginx.conf` dựng nginx làm cửa vào duy nhất, `/api/` đi tới service link, mọi đường dẫn còn lại đi tới service redirect.
+`infra/postgres/init.sql` tạo bảng `links`, được Postgres tự chạy lúc khởi tạo volume lần đầu.
+
+Một `Dockerfile` duy nhất ở gốc cho cả hai service; container nào chạy service nào là do `command` trong `compose.yaml` quyết định.
+Một `compose.yaml` duy nhất, chạy thành hai môi trường bằng cách đổi file trong `env/`.
+Staging ở cổng 8081, prod ở cổng 8080, mỗi môi trường một project name của Compose nên tách riêng cả container, network lẫn volume dữ liệu.
+
+`tests/rut-gon-va-chuyen-huong.test.ts` là bộ kiểm thử hộp đen, chỉ gửi HTTP vào nginx bằng `fetch` có sẵn của Node, không import dòng mã nào của service và không mở kết nối nào tới Postgres.
+
+### Vì sao việc này thuộc về đề tài
+
+Nghiệp vụ ở đây gần như bằng không, và đó là chủ ý, xem `docs/adr/0002-he-thong-demo-va-stack.md`.
+Cái đáng nói không phải dịch vụ rút gọn URL, mà là từ lúc này trở đi đề tài có một **configuration item** thật để quản lý.
+
+Mục 25.2 System building của Sommerville nói về việc biến mã nguồn thành một hệ chạy được, và nhấn mạnh rằng quá trình đó phải lặp lại được chứ không phụ thuộc vào máy của ai.
+Trước ticket này, câu đó trong báo cáo sẽ không có gì để chỉ vào.
+Bây giờ nó chỉ vào được một lệnh duy nhất dựng trọn cả stack, và cùng một lệnh ấy chỉ đổi file env là ra môi trường khác.
+
+Mục 25.4 Release management thì cần khái niệm "một thay đổi đi từ nơi thử tới nơi thật".
+Hai môi trường staging và prod tách biệt hoàn toàn là hình hài tối thiểu của đường đi đó.
+Chúng chưa được nối bằng bất cứ thứ gì tự động, và đúng ra là chưa được phép nối, vì `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` cấm dựng pipeline ở giai đoạn này.
+
+Còn một tác dụng nữa, thuộc về phần đo lường.
+Từ ticket sau, mỗi thay đổi sẽ được triển khai tay lên hai môi trường này và bấm giờ.
+Không có hệ để triển khai thì không có gì để bấm giờ, nên đây là điều kiện cần của toàn bộ Giai đoạn thủ công.
+
+### Chuyện đáng kể lại
+
+**Bộ kiểm thử xanh ngay lần đầu, và đó là cái bẫy.**
+
+Dựng stack lên, chạy kiểm thử, bốn trên bốn xanh trên cả staging lẫn prod.
+Nhìn thì xong rồi.
+
+Lúc soát lại mới lộ ra một lỗi mà kiểu chạy đó không bao giờ chạm tới được.
+Trong `nginx.conf` viết `proxy_pass http://link:3000` là cách thông thường nhất, nhưng nginx phân giải tên `link` thành địa chỉ IP **đúng một lần** lúc nạp config, rồi giữ nguyên địa chỉ ấy mãi mãi.
+Docker thì cấp lại IP mỗi lần container được dựng lại.
+Nghĩa là: dựng mới toàn bộ thì chạy tốt, còn triển khai lại chỉ một service thì nginx vẫn gõ cửa địa chỉ cũ và trả 502.
+
+Tái hiện được: dừng service `link`, cho một container khác chiếm mất địa chỉ cũ, bật `link` lên lại thì nó nhận IP mới, và nginx trả về đúng như dự đoán.
+
+```
+HTTP/1.1 502 Bad Gateway
+nginx/1.29.8
+```
+
+Chỗ này đáng kể lại vì hai lý do.
+
+Thứ nhất, Giai đoạn thủ công sắp tới sẽ triển khai lại tám tới mười lần, tức là lỗi này chắc chắn bung ra, và bung ra vào đúng lúc đang bấm giờ.
+Nó sẽ không hỏng theo kiểu dễ thấy mà theo kiểu "lúc được lúc không", tuỳ Docker có tình cờ cấp lại đúng IP cũ hay không.
+Một lỗi ngắt quãng như vậy chen vào giữa dữ liệu đo là thứ tệ nhất có thể xảy ra với phép so sánh hai giai đoạn.
+
+Thứ hai, #13 (blue-green cho prod) về bản chất chính là "nginx trỏ lại sang đám container vừa dựng".
+Nếu nginx không phân giải lại tên thì blue-green không thể hoạt động, và lúc đó sẽ rất khó lần ra nguyên nhân vì triệu chứng nằm ở tầng khác hẳn.
+
+Cách sửa là dùng DNS nội bộ của Docker kèm một biến trong `proxy_pass`, vì nginx chỉ chịu phân giải lại khi đích đến có chứa biến.
+Kiểm chứng bằng cách ép cả hai service đổi IP rồi chạy lại kiểm thử mà không đụng vào nginx.
+
+**Cổng gác readiness báo xanh cho một hệ đấu sai.**
+
+Bộ kiểm thử có một bước chờ stack sẵn sàng trước khi chạy, và bước đó ban đầu chỉ hỏi "gọi một mã không tồn tại có trả về 404 không".
+Vấn đề là 404 quá dễ có: trang lỗi mặc định của nginx cũng 404, service bị đấu nhầm cửa cũng 404.
+Nên cái cổng gác ấy xác nhận một thứ nó không hề quan sát được.
+
+Đổi sang bắt đúng mã 400 mà service `link` trả về khi thiếu trường `url`.
+Mã 400 chỉ ra được nếu request đã đi qua nginx, tới đúng service link, và service ấy đã đọc được thân JSON.
+Ngay sau khi đổi, chính cổng gác này bắt được một lần hỏng thật, khi nginx chưa nạp config mới.
+
+**Sửa `nginx.conf` xong chạy lại lệnh dựng thì nginx không nạp config mới.**
+
+File này được gắn vào container theo kiểu bind mount, nên nội dung trên đĩa đổi ngay, nhưng nginx đã đọc config vào bộ nhớ từ lúc khởi động.
+Compose thì chỉ dựng lại container khi **định nghĩa** service đổi, mà định nghĩa ở đây không đổi, nên nó để yên.
+Phải `docker compose restart nginx`.
+
+Đã ghi vào `README.md`, vì #4 sắp viết quy trình triển khai tay và đây đúng là loại bước dễ quên rồi ngồi tìm mãi không ra.
+
+**Bài học chung của cả ba chuyện trên.**
+Cả ba đều là hỏng ở tầng kết nối giữa các thành phần, không phải hỏng trong mã của thành phần nào.
+Kiểm thử đơn vị của từng service sẽ xanh hết, vì mỗi service đều đúng.
+Đây là lý do ticket đòi kiểm thử phải đi qua nginx thay vì gọi thẳng service, và cũng là lý do đáng nhắc trong báo cáo khi bàn về việc chọn tầng kiểm thử.
+
+### Một quyết định vượt ra ngoài tiêu chí nghiệm thu
+
+Đường dẫn được đặt là `/api/v1/links` chứ không phải `/api/links`, dù ticket không đòi.
+
+Lý do là `docs/adr/0002-he-thong-demo-va-stack.md` đã chốt hệ quả rằng nghiệp vụ phải có chỗ tự nhiên cho API v1 và v2 chạy song song, và #18 sẽ dùng đúng chỗ đó.
+Thêm số phiên bản bây giờ tốn ba ký tự, thêm về sau thì phải phá đường dẫn cũ, tức là tự tạo ra một thay đổi gãy tương thích ngay trong đề tài nói về release management.
+
+### Dẫn chứng
+
+- Mã nguồn: `services/link/`, `services/redirect/`, `infra/nginx/nginx.conf`, `compose.yaml`, `Dockerfile`
+- Cách chạy và cách kiểm thử: `README.md`
+- Vòng đời thay đổi: issue #3 với pull request #32
+- Nghiệm thu tách biệt hai môi trường: mã tạo trên staging trả 404 khi gọi ở prod, volume là `a2-staging_postgres-data` và `a2-prod_postgres-data`
+
+### Đang ở đâu sau mục này
+
+Hệ thống demo đã chạy được đầu cuối trên hai môi trường, dựng bằng một lệnh mỗi bên, có bộ kiểm thử hộp đen đi qua nginx.
+Vẫn chưa có service thứ ba, chưa có endpoint sức khoẻ, chưa có metrics, và cố ý chưa có pipeline.
+
+Ticket tiếp theo là #4 (A3), viết quy trình triển khai tay và mẫu Nhật ký thủ công.
+Từ đó trở đi mới bắt đầu bấm giờ, nên số liệu mốc của Giai đoạn thủ công chưa có dòng nào.
