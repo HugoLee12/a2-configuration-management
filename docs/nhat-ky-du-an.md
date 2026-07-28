@@ -422,3 +422,48 @@ Từ ticket sau, mỗi thay đổi merge vào `main` sẽ được triển khai 
 
 Ticket tiếp theo là #5 (B1), service thống kê lượt truy cập.
 Đây là ticket đầu tiên có số đo, và cũng là ticket đầu tiên có hai service gọi nhau qua mạng.
+
+---
+
+## 2026-07-28 - Số đo về đích sau khi issue đã đóng
+
+**Ticket**: #39 (A10)
+**Pull request**: #40
+**Phục vụ**: mục 25.3 Change management, ở chỗ nói về giới hạn của quy trình chứ không phải ở chỗ khoe quy trình
+
+### Vấn đề
+
+Lộ ra lúc chuẩn bị triển khai tay cho #5, tức là ngay lần đầu quy trình của #4 chạy thật.
+
+`CONTRIBUTING.md` đòi mọi pull request phải có dòng `Closes #<số-issue>`, và `main` được bảo vệ nên không có đường nào khác để đưa file lên.
+Nhưng số đo của một lần triển khai tay chỉ tồn tại **sau** khi thay đổi đã merge, mà đúng lúc merge thì issue tương ứng đã tự đóng.
+Nên tới lúc có số để ghi thì không còn issue nào để đóng nữa.
+
+Chuyện này sẽ lặp lại ở cả tám tới mười lần triển khai còn lại của Giai đoạn thủ công, nên chốt một lần rẻ hơn là mỗi lần lách một kiểu.
+
+### Đã thay đổi những gì
+
+`CONTRIBUTING.md` có thêm mục ngoại lệ: pull request **chỉ** chạm `docs/nhat-ky-thu-cong.md` thì thân ghi `Nhật ký thủ công cho #<số-issue>` và không ghi `Closes`.
+`CLAUDE.md` bỏ chữ tuyệt đối trong câu nói thiếu `Closes` là gãy truy vết, và trỏ sang ngoại lệ đó.
+
+### Vì sao không chọn cách kia
+
+Phương án còn lại là mở một issue con cho mỗi lần ghi nhật ký, đúng luật hơn vì không phải đặt ngoại lệ nào.
+Bỏ vì nó đẻ thêm khoảng mười issue thuần thủ tục, làm loãng danh sách issue mà giảng viên sẽ mở ra xem, và làm hỏng luôn phép đếm "một issue là một thay đổi" mà #10 dựa vào.
+
+Lý do sâu hơn để đặt ngoại lệ chứ không nắn dữ liệu cho vừa luật: bản ghi số đo không phải một thay đổi lên Hệ thống demo, nó là dữ liệu **về** một thay đổi đã xong.
+Nó không có lead time của riêng nó, nên nó vốn không thuộc chuỗi truy vết mà `Closes` dựng ra.
+Ép nó vào chuỗi đó bằng `Closes` sẽ gắn hai pull request vào cùng một issue và làm mờ đúng cái mốc mà #10 với #22 cần.
+
+### Đáng kể lại ở chỗ nào
+
+Đây là lần thứ hai một quy ước của repo phải sửa vì thực tế không vừa với nó, sau #24.
+Cả hai lần đều phát hiện lúc quy ước bị dùng thật chứ không phải lúc viết ra nó.
+
+Nhận xét này dùng được cho báo cáo khi bàn về 25.3: một quy trình thay đổi được thiết kế trên giấy luôn có chỗ hở, và giá trị của nó không nằm ở chỗ không bao giờ hở, mà ở chỗ chỗ hở được phát hiện, ghi lại và sửa thành văn thay vì lặng lẽ đi vòng qua.
+
+### Dẫn chứng
+
+- `CONTRIBUTING.md` mục "Ngoại lệ: pull request ghi Nhật ký thủ công", `CLAUDE.md` mục Ràng buộc phải tôn trọng
+- Vòng đời thay đổi: issue #39 với pull request #40
+- Tiền lệ cùng dạng: #24 với pull request #25
