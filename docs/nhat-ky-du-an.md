@@ -307,3 +307,118 @@ Vẫn chưa có service thứ ba, chưa có endpoint sức khoẻ, chưa có met
 
 Ticket tiếp theo là #4 (A3), viết quy trình triển khai tay và mẫu Nhật ký thủ công.
 Từ đó trở đi mới bắt đầu bấm giờ, nên số liệu mốc của Giai đoạn thủ công chưa có dòng nào.
+
+---
+
+## 2026-07-28 - Trỏ CLAUDE.md tới Hệ thống demo
+
+**Ticket**: #33 (A8)
+**Pull request**: #34
+**Phục vụ**: không thuộc mục nào của Chương 25, đây là việc giữ cho file luật khớp với repo sau khi repo có mã nguồn
+
+Sau #3 thì repo có mã, nhưng `CLAUDE.md` vẫn viết như thể chưa có dòng nào.
+Thêm một mục `Hệ thống demo` chỉ gồm con trỏ: mã ở đâu, hạ tầng ở đâu, cách chạy đọc ở `README.md`.
+
+Kèm hai ràng buộc mà một phiên làm việc mới chắc chắn vi phạm nếu không được nói trước: kiểm thử chỉ đi qua nginx bằng HTTP, và `erasableSyntaxOnly` cấm `enum`, `namespace` cùng parameter property.
+Cả hai đều là loại luật mà vi phạm xong mới biết, nên phải nằm ở file được đọc đầu tiên chứ không phải ở chỗ nào đó trong `README.md`.
+
+Cũng ghi rõ hiện mới có hai service, vì dòng mở đầu của file nói "hệ ba service" và người đọc sẽ đi tìm service thứ ba.
+
+Đây là lần thứ ba `CLAUDE.md` được cập nhật theo kiểu chỉ thêm con trỏ chứ không chép nội dung, sau #28 và #29.
+Cách này giữ được một chỗ duy nhất cho mỗi thứ, đổi lại là file luật gần như không tự đứng một mình đọc được, luôn phải mở kèm hai ba file khác.
+
+---
+
+## 2026-07-28 - Quy trình triển khai tay và chỗ ghi mốc giờ
+
+**Ticket**: #4 (A3)
+**Pull request**: #35
+**Phục vụ**: mục 25.2 System building và 25.4 Release management; và là điều kiện cần của toàn bộ phần đo lường, vì đây là chỗ sinh ra vế "trước khi có pipeline" của Luận điểm
+
+### Ticket đòi cái gì
+
+Một tài liệu ghi từng bước triển khai Hệ thống demo hoàn toàn bằng tay, đủ chi tiết để mọi lần làm đều giống nhau, kèm một chỗ để ghi mốc thời gian.
+
+Chữ "giống nhau" là điểm mấu chốt chứ không phải chữ "bằng tay".
+Nếu lần này quên một bước, lần sau nhớ, lần thứ ba làm theo thứ tự khác, thì các con số thu được không so sánh với nhau được, và cũng không so với Giai đoạn pipeline được.
+Lúc đó toàn bộ phần đo lường của đồ án mất chỗ dựa.
+
+Ticket cũng cấm tuyệt đối việc tự động hoá bất kỳ bước nào.
+
+### Đã thay đổi những gì
+
+Hai file mới trong `docs/`, và một dòng trỏ trong `README.md`.
+
+`docs/trien-khai-thu-cong.md` là quy trình: sáu bước, từ `git pull` cho tới lúc bộ kiểm thử bắn vào prod xanh toàn bộ.
+Mỗi bước ghi kèm thứ phải nhìn thấy thì mới được đi tiếp, để không có chỗ nào phải tự suy đoán.
+File cũng chứa quy tắc bấm giờ, cách xử lý khi có sự cố, và cách quay về bản cũ nếu prod hỏng.
+
+`docs/nhat-ky-thu-cong.md` là chỗ chứa dữ liệu: một bảng, mỗi lần triển khai một môi trường là một dòng, nên một thay đổi bình thường sinh ra hai dòng là staging và prod.
+Bảng ghi số issue, SHA commit, môi trường, thời điểm merge, thời điểm bắt đầu, thời điểm hoàn tất, và sự cố.
+Bảng hiện còn rỗng vì chưa có lần triển khai thật nào.
+
+### Vì sao việc này thuộc về đề tài
+
+`docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` chốt rằng giữa hai giai đoạn chỉ được đổi đúng một biến, là sự hiện diện của pipeline.
+Câu đó nghe thì gọn, nhưng nó đặt ra một yêu cầu nặng lên giai đoạn đầu: cách làm tay phải cố định, chứ không phải muốn làm thế nào cũng được miễn là không có CI.
+
+Một quy trình chỉ nằm trong đầu người làm thì không cố định, vì nó trôi dần theo từng lần và không ai phát hiện ra.
+Viết ra thành văn bản là cách rẻ nhất để giữ nó đứng yên, và cũng là thứ đưa vào phụ lục báo cáo được.
+
+Còn một vai trò thứ hai, thuộc về mục 25.2 System building.
+Sommerville nhấn mạnh rằng quá trình biến mã nguồn thành hệ chạy được phải lặp lại được và không phụ thuộc vào máy của ai.
+Tài liệu này chính là bản mô tả quá trình đó ở dạng thủ công, và ở tuần sau nó sẽ được đặt cạnh workflow của Giai đoạn pipeline để thấy cùng một việc được diễn đạt bằng hai cách.
+
+### Ba quyết định đáng kể lại
+
+**Ranh giới của chữ "làm tay" phải viết thẳng ra, không để tự hiểu.**
+
+Ticket cấm tự động hoá, nhưng cấm tới đâu thì không hiển nhiên.
+Viết một script gộp sáu lệnh thành một có phải là tự động hoá không?
+Về mặt chữ nghĩa thì đó không phải CI, nhưng về mặt số liệu thì nó chính là pipeline thu nhỏ, và nó sẽ kéo thời gian của Giai đoạn thủ công xuống gần Giai đoạn pipeline.
+
+Điều tệ nhất là chuyện đó không lộ ra ở đâu cả.
+Nhật ký chỉ ghi mốc giờ, không ghi cách gõ lệnh, nên khi tổng hợp số ở #10 sẽ không có cách nào biết một dòng nào đó nhanh bất thường vì đã được script hoá.
+Vì vậy tài liệu ghi rõ hai danh sách: được dùng lịch sử shell và chép lệnh từ tài liệu ra dán; không được viết script, đặt alias, hay thêm lệnh mới vào `scripts` của `package.json`.
+
+**Nhật ký cố ý không có cột nào chứa số phút đã tính sẵn.**
+
+Ban đầu định thêm một cột "số phút" cho tiện đọc.
+Bỏ đi, vì hai lý do.
+
+Thứ nhất, cột đó mơ hồ: từ merge tới hoàn tất là một con số, từ lúc bắt đầu gõ tới hoàn tất là một con số khác, và cả hai đều có tên gọi hợp lý là "số phút".
+Một cột mang hai nghĩa trong bảng dữ liệu là thứ sẽ gây tranh cãi đúng vào lúc viết báo cáo.
+
+Thứ hai, mốc thô là thứ không dựng lại được nếu ghi sai, còn số dẫn xuất thì tính lúc nào cũng được.
+Nên nhật ký chỉ giữ mốc thô, việc tính toán để cho #10 và #22.
+
+**Việc ghi nhật ký nằm ngoài đồng hồ, và đó là một lựa chọn có lợi cho phe đối lập.**
+
+Ghi nhật ký cũng tốn thời gian, và nó chỉ tốn vì đang ở Giai đoạn thủ công.
+Tính nó vào thì con số của giai đoạn này to lên, tức là chênh lệch giữa hai giai đoạn to lên, tức là luận điểm trông thuyết phục hơn.
+
+Đúng ra không được làm vậy.
+Giai đoạn pipeline sẽ không có công việc tương ứng, nên tính vào là tự thổi phồng kết quả bằng một khoản chi phí do chính phương pháp đo sinh ra chứ không phải do việc thiếu pipeline sinh ra.
+Quyết định là để ngoài đồng hồ, và ghi lý do vào tài liệu để báo cáo nhắc lại được ở phần bàn về giới hạn của phép đo.
+
+### Đã kiểm chứng thế nào
+
+Tài liệu quy trình mà sai một lệnh thì lần bấm giờ đầu tiên sẽ bị nhiễu bởi chính lỗi tài liệu, mà lần đó thì không đo lại được.
+Vì vậy trước khi đóng ticket đã chạy thử trọn sáu bước một lượt: kiểm tra kiểu sạch, staging và prod đều dựng được, bộ kiểm thử 4/4 xanh ở cả hai môi trường.
+Hai lệnh lấy giờ UTC, một cho Git Bash và một cho PowerShell, cũng được chạy thử và cho ra cùng một giá trị.
+
+Lần chạy này không ghi vào Nhật ký thủ công.
+Nó là phép thử tài liệu chứ không phải triển khai một thay đổi thật, và file dữ liệu chỉ nên chứa dữ liệu thật.
+
+### Dẫn chứng
+
+- `docs/trien-khai-thu-cong.md`, `docs/nhat-ky-thu-cong.md`
+- Vòng đời thay đổi: issue #4 với pull request #35
+
+### Đang ở đâu sau mục này
+
+Phần chuẩn bị của Giai đoạn thủ công đã xong: có hệ để triển khai, có quy trình để làm, có chỗ để ghi.
+Từ ticket sau, mỗi thay đổi merge vào `main` sẽ được triển khai tay lên hai môi trường và bấm giờ, nên Nhật ký thủ công bắt đầu có dòng.
+
+Ticket tiếp theo là #5 (B1), service thống kê lượt truy cập.
+Đây là ticket đầu tiên có số đo, và cũng là ticket đầu tiên có hai service gọi nhau qua mạng.
