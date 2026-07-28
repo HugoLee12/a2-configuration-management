@@ -8,6 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY services/link/package.json services/link/
 COPY services/redirect/package.json services/redirect/
+COPY services/stats/package.json services/stats/
 RUN npm ci --omit=dev
 
 COPY services/ services/

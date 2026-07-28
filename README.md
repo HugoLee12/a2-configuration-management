@@ -8,15 +8,19 @@ Bối cảnh đồ án nằm ở `CONTEXT.md`, quy ước đóng góp ở `CONTR
 ## Hình dạng của hệ
 
 ```
-người dùng -> nginx -+-> /api/v1/  -> service link     -+-> Postgres
+người dùng -> nginx -+-> /api/v1/  -> service link     -+
                      |                                  |
-                     +-> /<mã>     -> service redirect -+
+                     +-> /<mã>     -> service redirect -+-> Postgres
+                                                        |
+                        worker stats (không có cổng) ---+
 ```
 
 nginx là cửa vào duy nhất.
-Hai service không bao giờ được gọi trực tiếp từ bên ngoài, kể cả bởi bộ kiểm thử.
+Hai service phía sau nó không bao giờ được gọi trực tiếp từ bên ngoài, kể cả bởi bộ kiểm thử.
 
-Service thứ ba, phần thống kê lượt truy cập, thuộc về #5 nên chưa có ở đây.
+Service thứ ba là `stats`, một worker chạy nền không phơi cổng nào.
+Mỗi lượt truy cập một mã ngắn được service `redirect` ghi thành một dòng trong bảng `visits`, rồi worker rút hàng đợi đó ra theo chu kỳ và cộng dồn vào bảng `link_stats`.
+Vì vậy worker không nằm trên đường chuyển hướng: dừng nó thì chuyển hướng vẫn chạy bình thường, chỉ có số lượt là đứng yên cho tới khi nó sống lại.
 
 ## Chạy hệ
 
@@ -31,8 +35,13 @@ docker compose --env-file env/prod.env    up -d --build   # prod, cổng 8080
 Hai môi trường tách biệt hoàn toàn: khác cổng, khác project name của Compose, nên khác container, khác network và khác volume dữ liệu.
 Dựng cả hai cùng lúc được.
 
-Một cái bẫy khi triển khai tay: sửa `infra/nginx/nginx.conf` rồi chạy lại lệnh trên thì nginx **không** nạp config mới, vì định nghĩa service không đổi nên Compose không dựng lại container.
+Hai cái bẫy khi triển khai tay.
+
+Sửa `infra/nginx/nginx.conf` rồi chạy lại lệnh trên thì nginx **không** nạp config mới, vì định nghĩa service không đổi nên Compose không dựng lại container.
 Phải `docker compose --env-file env/staging.env restart nginx`.
+
+Sửa `infra/postgres/init.sql` thì schema mới **không** tới được cơ sở dữ liệu đang có, vì Postgres chỉ chạy file này lúc khởi tạo một volume rỗng.
+Phải xoá volume trước: `docker compose --env-file env/staging.env down -v` rồi `up` lại.
 
 Dừng lại:
 
@@ -53,7 +62,12 @@ curl -X POST localhost:8081/api/v1/links -H 'content-type: application/json' \
 curl -i localhost:8081/aB3xY9z
 # HTTP/1.1 302 Found
 # Location: https://example.com/mot-duong-dan-rat-dai
+
+curl localhost:8081/api/v1/links/aB3xY9z/stats
+# {"code":"aB3xY9z","visits":1}
 ```
+
+Số lượt tới muộn hơn lượt truy cập vài giây, vì worker `stats` tổng hợp theo chu kỳ chứ không đếm ngay lúc chuyển hướng.
 
 Số phiên bản nằm sẵn trong đường dẫn ngay từ v1.
 Lý do là `docs/adr/0002-he-thong-demo-va-stack.md` đòi nghiệp vụ phải có chỗ cho API v1 và v2 chạy song song, mà thêm số phiên bản về sau thì phải phá đường dẫn cũ.
@@ -77,7 +91,7 @@ npm run typecheck
 
 ## Ghi chú về mã nguồn
 
-Hai service nằm trong `services/`, dùng chung một `Dockerfile` ở gốc.
+Ba service nằm trong `services/`, dùng chung một `Dockerfile` ở gốc.
 Container nào chạy service nào là do `command` trong `compose.yaml` quyết định.
 
 Node 24 chạy thẳng TypeScript nên không có bước biên dịch riêng: kiểu được kiểm bằng `tsc --noEmit`, còn lúc chạy thì kiểu bị bóc đi.
