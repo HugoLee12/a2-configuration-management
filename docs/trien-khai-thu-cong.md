@@ -23,20 +23,22 @@ gh pr view <số-pr> --json mergedAt                          #   -> cột Merge
 npm run typecheck                                           # bước 2
 
 docker compose --env-file env/staging.env up -d --build     # bước 3
-docker compose --env-file env/staging.env ps                #   phải thấy 4 dòng Up
-npm test                                                    # bước 4, phải thấy pass 4
+docker compose --env-file env/staging.env ps                #   phải thấy 5 dòng Up
+npm test                                                    # bước 4, phải thấy pass 7
 
 (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của staging
 
 docker compose --env-file env/prod.env up -d --build        # bước 5
-docker compose --env-file env/prod.env ps                   #   phải thấy 4 dòng Up
-$env:BASE_URL = 'http://localhost:8080'; npm test           # bước 6, phải thấy pass 4
+docker compose --env-file env/prod.env ps                   #   phải thấy 5 dòng Up
+$env:BASE_URL = 'http://localhost:8080'; npm test           # bước 6, phải thấy pass 7
 $env:BASE_URL = $null
 
 (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của prod, dừng đồng hồ
 ```
 
 Nếu thay đổi lần này có đụng vào `infra/nginx/nginx.conf` thì thêm `restart nginx` sau mỗi lệnh `up`, xem bước 3.
+
+Nếu có đụng vào `infra/postgres/init.sql` thì thêm `down -v` **trước** mỗi lệnh `up`, cũng xem bước 3.
 
 Bất kỳ bước nào không cho ra kết quả như ghi ở trên thì dừng lại, xem mục "Khi có sự cố"; đồng hồ vẫn chạy.
 
@@ -134,11 +136,24 @@ Phải không có lỗi nào thì mới đi tiếp.
 
 ### Bước 3: triển khai staging
 
+Nếu thay đổi lần này có đụng vào `infra/postgres/init.sql` thì phải xoá volume **trước**:
+
+```sh
+docker compose --env-file env/staging.env down -v
+```
+
+Postgres chỉ chạy `init.sql` đúng một lần, lúc khởi tạo một volume rỗng.
+Volume đã có dữ liệu thì file mới nằm im, bảng mới không bao giờ được tạo, và triệu chứng là service trả 500 chứ không phải một lỗi nói rõ nguyên nhân.
+Bỏ qua bước này thì bước 4 chắc chắn đỏ.
+
+Giai đoạn này chưa có cơ chế migration, nên đổi schema đồng nghĩa với mất toàn bộ dữ liệu của môi trường đó.
+Chấp nhận được vì cả hai môi trường chỉ chứa dữ liệu thử.
+
 ```sh
 docker compose --env-file env/staging.env up -d --build
 ```
 
-Chờ tới khi lệnh trả về, rồi kiểm tra bốn container đều `Up`:
+Chờ tới khi lệnh trả về, rồi kiểm tra năm container đều `Up`:
 
 ```sh
 docker compose --env-file env/staging.env ps
@@ -172,6 +187,12 @@ Nếu đỏ, xem mục sự cố ở dưới.
 Đồng hồ vẫn chạy.
 
 ### Bước 5: triển khai prod
+
+Cũng như bước 3, nếu có đụng `init.sql` thì xoá volume trước:
+
+```sh
+docker compose --env-file env/prod.env down -v
+```
 
 ```sh
 docker compose --env-file env/prod.env up -d --build
