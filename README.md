@@ -84,4 +84,4 @@ Node 24 chạy thẳng TypeScript nên không có bước biên dịch riêng: k
 Đổi lại `tsconfig.json` bật `erasableSyntaxOnly`, nghĩa là không dùng được `enum`, `namespace` hay parameter property.
 
 Giai đoạn thủ công **cố tình chưa có pipeline**, xem `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md`.
-Mọi lần build và triển khai đều làm tay và được ghi giờ.
+Mọi lần build và triển khai đều làm tay theo `docs/trien-khai-thu-cong.md` và được ghi giờ vào `docs/nhat-ky-thu-cong.md`.
