@@ -708,3 +708,137 @@ Nhật ký thủ công có hai dòng và một lần phát hành thất bại.
 Quy trình đã bịt cái bẫy vừa lộ ra, nên lần triển khai của #6 sẽ là mẫu đầu tiên đo trên quy trình không còn lỗi đã biết.
 
 Ticket tiếp theo là #6 (B2), xác thực địa chỉ đầu vào.
+
+---
+
+## 2026-07-28 - Xác thực địa chỉ, và một bước phục hồi chưa bao giờ chạy
+
+**Ticket**: #6 (B2), #48
+**Pull request**: #46, #47
+**Phục vụ**: thay đổi cỡ chuẩn thứ hai của Giai đoạn thủ công, tức mẫu số liệu thứ hai; và là dẫn chứng cho mục bàn về giới hạn của phép đo trong báo cáo
+
+### Ticket đòi cái gì
+
+Địa chỉ không hợp lệ bị từ chối ngay lúc tạo link, kèm lý do cho biết sai ở đâu, thay vì sinh ra một mã ngắn dẫn tới chỗ vô nghĩa.
+Chỉ chấp nhận giao thức `http` và `https`.
+
+Ràng buộc quan trọng không nằm ở phần nghiệp vụ mà nằm ở phần đo: kích thước phải tương đương #5 thì bảng so sánh lead time mới còn nghĩa.
+Kèm theo đó, bảy test đã có không được phép sửa, vì sửa test cũ là cách âm thầm nhất để làm hai mẫu đo không so được với nhau.
+
+### Đã thay đổi những gì
+
+Trong `services/link/src/index.ts`, phép kiểm tra "chuỗi không rỗng" được thay bằng `URL.parse()` của thư viện chuẩn, rồi lọc giao thức qua một tập hai phần tử.
+Không thêm phụ thuộc nào, và không viết lấy một dòng nào để tự phân tích địa chỉ.
+
+Ba test mới nằm ở `tests/xac-thuc-dia-chi.test.ts`, vẫn đi qua nginx bằng HTTP đúng như seam mà #3 đặt ra.
+Bảy test cũ không phải sửa một dòng nào, đúng tiêu chí nghiệm thu.
+
+Ràng buộc giao thức không chỉ để dữ liệu sạch.
+Nhận mọi giao thức thì service `redirect` trở thành chỗ phát tán `javascript:` và `data:` dưới một địa chỉ trông sạch sẽ, tức là chính hệ demo tự biến thành công cụ tấn công.
+Đây là loại lỗi mà một dịch vụ rút gọn URL thật sẽ gặp ngay ngày đầu, nên chặn nó không phải là thêm tính năng nghiệp vụ.
+
+Bộ kiểm thử lên 10 test, kéo theo một chỗ phải sửa ở nơi không ai nghĩ tới: hai dòng `phải thấy pass 7` trong mục "Bảng lệnh" của `docs/trien-khai-thu-cong.md`.
+Con số kiểm chứng của quy trình bị neo cứng vào số lượng test, nên mỗi ticket thêm test đều phải nhớ sửa nó.
+Đó là một mối nối dễ mục, đã ghi lại chứ chưa sửa vì sửa nó là thay đổi quy trình, cần ticket riêng.
+
+### Chuyện đáng kể lại
+
+Bước 6 đỏ ba test thống kê, với đúng triệu chứng của #5: `relation "link_stats" does not exist`.
+
+Điều này lẽ ra không được phép xảy ra.
+Mục trước vừa kết lại rằng #6 sẽ là mẫu đầu tiên đo trên quy trình không còn lỗi đã biết.
+#6 chỉ chạm mã service, không chạm `infra/postgres/init.sql`, nên khối lệnh chép ra không có `down -v` là **đúng** quy trình, và lần này quy trình không bẫy ai cả.
+
+Cái đỏ ở đây là nợ của #5, mà bản ghi của #5 tưởng đã trả xong.
+
+Mục "#5 prod" trong Nhật ký thủ công ghi rằng prod xanh trở lại lúc `15:18` nhờ `down -v` rồi `up -d --build`.
+Bước `down -v` đó chưa bao giờ chạy.
+
+Bằng chứng là mốc tạo của volume, thứ mà `down -v` bắt buộc phải làm mới:
+
+| Volume | Mốc tạo, đo lúc 16:08 | Nghĩa |
+|---|---|---|
+| `a2-prod_postgres-data` | `2026-07-28T07:51:35Z` | vẫn là volume của lần triển khai #3 |
+| `a2-staging_postgres-data` | `2026-07-28T14:49:57Z` | đã dựng lại sau khi #5 đổi schema |
+
+Nếu `down -v` chạy lúc 15:17 thì volume prod phải mang mốc của lúc đó.
+Nó mang mốc của tám tiếng trước.
+Lệnh thật sự chạy lúc ấy chỉ dựng lại container mà giữ nguyên volume, nên `init.sql` vẫn nằm im và hai bảng vẫn không tồn tại.
+
+Prod do đó hỏng liên tục từ `15:16` tới `16:21`, tức 65 phút, chứ không phải 2 phút như bản ghi nói.
+
+Khả năng cao nhất là bước 6 lúc đó bắn vào staging chứ không phải prod, vì `$env:BASE_URL` đã bị xoá hoặc chưa từng được đặt.
+Đó đúng là cái bẫy mà `docs/trien-khai-thu-cong.md` cảnh báo, chỉ khác chiều: tài liệu lo người quên xoá biến rồi tưởng đang thử staging, còn ở đây là quên đặt biến rồi tưởng đang thử prod.
+Không còn bằng chứng nào để xác nhận, nên nó dừng ở mức giả thuyết và đã được ghi đúng như vậy.
+
+Bản ghi sai được **giữ nguyên** trong Nhật ký thủ công, kèm một mục đính chính bên dưới.
+Sửa đè lên nó sẽ xoá mất thứ có giá trị nhất ở đây: bằng chứng rằng một quy trình thủ công có thể báo cáo thành công cho một bước chưa bao giờ chạy, mà không có gì chặn lại.
+
+### Vì sao việc này thuộc về đề tài
+
+Mục của #5 đã nói tự động hoá thắng ở tính lặp lại được.
+Lần này lộ ra một vế nữa, sắc hơn: **tính kiểm chứng được**.
+
+Ở Giai đoạn thủ công, bản ghi là do chính người thao tác tự khai.
+Người khai hoàn toàn thành thật, tin rằng mình đã chạy `down -v`, và viết ra một dòng nhật ký sai mà không hề biết.
+Không có gì trong quy trình đối chiếu lời khai đó với thực tế, nên sai lệch sống được 65 phút và chỉ lộ ra nhờ một ticket khác tình cờ chạm vào cùng chỗ.
+
+Sang Giai đoạn pipeline, cùng bước đó để lại log của máy, gắn với số hiệu lần chạy, không do ai gõ tay vào.
+Một bước không chạy thì không có log, chứ không phải có một dòng nói rằng nó đã chạy.
+
+Đây là dẫn chứng cụ thể cho một luận điểm mà nếu chỉ chép từ Chương 25 thì rất trừu tượng: giá trị của Configuration Management không chỉ là làm nhanh hơn, mà là làm cho trạng thái hệ thống thành thứ **đọc ra được** thay vì thứ phải tin lời ai đó.
+
+Còn một chi tiết đáng đưa vào báo cáo.
+Suốt 65 phút đó prod không sập, nó hỏng một phần: tạo link và chuyển hướng vẫn phục vụ bình thường, còn mọi lượt truy cập đều mất trắng vì `redirect` ghi vào bảng `visits` không tồn tại theo kiểu bắn rồi quên.
+Bốn test cũ xanh trong suốt thời gian đó, nên không có gì báo động.
+Một hệ hỏng lặng lẽ mà vẫn trả lời như thường là thứ khó phát hiện hơn nhiều so với một hệ sập hẳn, và đó chính là lý do #8 và #9 tồn tại trong kế hoạch.
+
+### Đã kiểm chứng thế nào
+
+Mục của #5 rút ra rằng việc kiểm chứng khi phát triển đụng vào chính môi trường sẽ được đo là một biến của phép đo, không phải chuyện bên lề.
+#6 là ticket đầu tiên áp dụng bài học đó.
+
+Bộ kiểm thử được chạy trên một stack thứ ba dựng riêng cho việc phát triển, project `a2-dev`, cổng 8099, file env nằm ngoài kho mã.
+Nó có container riêng, network riêng và volume riêng, nên `a2-staging` lẫn `a2-prod` không bị đụng tới trước lúc bấm giờ.
+Xong việc thì `down -v` và xoá luôn image.
+
+Nhờ vậy dòng staging của #6 không mang vết bẩn mà dòng staging của #5 mang.
+Phần còn chung là cache build của Docker, nên lần build có nhanh hơn một chút; điều này áp dụng cho mọi lần triển khai sau chứ không riêng lần này.
+
+Từ lần này trở đi, `down -v` được coi là đã chạy khi và chỉ khi mốc tạo của volume đổi.
+Lệnh chạy xong mà không báo lỗi không phải là bằng chứng, vì `down` không kèm `-v` cũng chạy xong mà không báo lỗi.
+
+### Số liệu
+
+| Mẫu | staging | prod | Sự cố |
+|---|---|---|---|
+| #5 | 2 phút | 5 phút | phát hành thất bại |
+| #6 | 2 phút | 15 phút | phát hành thất bại |
+
+Hai con số của #6 phải đọc kèm nhau chứ không tách rời.
+13 trong 15 phút của prod là thời gian chẩn đoán và sửa một sự cố mà nguyên nhân thuộc về #5, còn phần triển khai đúng nghĩa chỉ mất khoảng 2 phút như staging.
+
+Khi tổng hợp ở #10, hai chỉ số này thuộc về hai ticket khác nhau dù sinh ra từ cùng một sự cố:
+
+- **Change failure rate** tính một lần phát hành thất bại cho #6, theo đúng định nghĩa "đỏ ở prod" trong `docs/trien-khai-thu-cong.md`. Quy tắc đó cố ý không hỏi nguyên nhân thuộc về ai, và giữ nguyên như vậy tốt hơn là mở ra chỗ để tranh cãi từng ca.
+- **MTTR** là 65 phút và thuộc về sự cố của #5. Lấy 13 phút của #6 làm MTTR là đếm thiếu gần năm lần.
+
+### Dẫn chứng
+
+- Thay đổi mã và ba test mới: pull request #46, commit `555bc78`
+- Số đo, mục đính chính và ghi chú sự cố: pull request #47, `docs/nhat-ky-thu-cong.md` mục "Đính chính, phát hiện lúc triển khai #6" và "#6 prod"
+- Bằng chứng volume sau khi sửa: `a2-prod_postgres-data` mang mốc `2026-07-28T16:20:42Z`, và prod có đủ ba bảng `links`, `visits`, `link_stats`
+- Bản ghi bị đính chính: `docs/nhat-ky-thu-cong.md` mục "#5 prod"
+
+### Đang ở đâu sau mục này
+
+Nhật ký thủ công có bốn dòng và hai lần phát hành thất bại trên hai mẫu, tức change failure rate của Giai đoạn thủ công tới giờ là 100%.
+Con số đó sẽ dịu đi khi có thêm mẫu, nhưng bản thân việc hai lần đầu đều hỏng đã là một dữ kiện đáng nói chứ không phải xui rủi.
+
+Hai chỗ mỏng đã lộ ra và chưa có ticket:
+
+- Bộ kiểm thử không in ra địa chỉ nó đang bắn vào, nên một lần chạy nhầm môi trường không để lại dấu vết nào. Đây chính là thứ đã che giấu sự cố của #5 suốt 65 phút.
+- `waitForStack` trả về ngay khi service `link` đáp 400, mà 400 không chạm cơ sở dữ liệu, nên nó báo sẵn sàng trong lúc Postgres còn đang khởi động. Lỗi này đã vấp phải một lần trong lúc phát triển #6, và nó sẽ thành test chập chờn khi #13 dùng lại bộ test này làm smoke test cho blue-green.
+
+Ticket tiếp theo là #7 (B3), endpoint sức khoẻ và sẵn sàng cho ba service.
+Nó chạm đúng vào chỗ mỏng thứ hai ở trên, nên hai việc nên được cân nhắc cùng nhau.
