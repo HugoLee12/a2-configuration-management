@@ -5,6 +5,19 @@ Repo này là đồ án A2 của học phần CNTT313E1 (Chuyên đề kỹ thu�
 
 Đọc `CONTEXT.md` để dùng đúng thuật ngữ, `docs/adr/` trước khi đề xuất bất kỳ thay đổi kiến trúc nào, và `README.md` trước khi đụng vào mã của Hệ thống demo.
 
+## Bắt đầu một phiên mới
+
+File này là luật, không phải bảng theo dõi tiến độ.
+Đồ án đang dở ở đâu thì **không** ghi vào đây, vì chép trạng thái vào một file luật thì nó sai ngay phiên sau mà không ai nhớ cập nhật.
+
+Ba chỗ phải đọc, theo thứ tự:
+
+1. **Mục cuối cùng của `docs/nhat-ky-du-an.md`**, phần "Đang ở đâu sau mục này". Đây là chỗ ghi việc vừa xong, việc còn dở và ticket kế tiếp.
+2. **`gh issue list --state open`** để biết ticket nào còn mở, và `gh issue view <số>` để xem cái nào đã hết blocker.
+3. **`docs/nhat-ky-thu-cong.md`** nếu việc sắp làm có triển khai tay, để biết đã có bao nhiêu mẫu đo và lần trước hỏng ở đâu.
+
+Kết thúc một phiên thì cập nhật phần "Đang ở đâu sau mục này" của mục nhật ký mới nhất, không sửa file này.
+
 ## Ràng buộc phải tôn trọng
 
 - **Rubric là trọng tài.** Mọi tranh luận về phạm vi giải quyết bằng năm tiêu chí chấm điểm trong `CONTEXT.md`, không bằng cái gì "đúng chuẩn công nghiệp".
