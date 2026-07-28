@@ -12,33 +12,44 @@ Cách chạy hệ và hình dạng của hệ nằm ở `README.md`; ở đây c
 Mục này là toàn bộ quy trình gói lại thành một khối chép được, dành cho người đã đọc phần "Các bước" ở dưới ít nhất một lần.
 Nó không phải bản rút gọn có quyền khác phần dưới: mỗi dòng ở đây tương ứng đúng một dòng ở đó, và khi sửa quy trình thì phải sửa cả hai chỗ.
 
+**Đọc hết mục này trước khi chép khối lệnh.**
+Hai bước trong khối có điều kiện, và cả hai nằm sẵn ở dạng dòng bị chú thích, đúng chỗ phải chạy.
+Bước 1 có một lệnh cho biết lần merge này đụng file nào; theo đó mà bỏ dấu `#` ở dòng tương ứng:
+
+- đụng `infra/postgres/init.sql` thì mở hai dòng `down -v`, chúng nằm **trước** lệnh `up`
+- đụng `infra/nginx/nginx.conf` thì mở hai dòng `restart nginx`, chúng nằm **sau** lệnh `up`
+
+Chép cả khối mà không mở dòng nào là đúng cho thay đổi chỉ đụng mã service, và sai cho hai trường hợp trên.
+Bỏ sót thì bước 4 hoặc bước 6 đỏ; đã xảy ra một lần ở lần triển khai của #5, xem mục "#5 prod" trong `docs/nhat-ky-thu-cong.md`.
+
 ```powershell
 (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Bắt đầu, chép lại
 
 git checkout main                                           # bước 1
 git pull
 git log -1 --format='%h %s'                                 #   -> cột Commit
+git --no-pager show --stat HEAD                             #   đụng init.sql hay nginx.conf?
 gh pr view <số-pr> --json mergedAt                          #   -> cột Merge
 
 npm run typecheck                                           # bước 2
 
+# docker compose --env-file env/staging.env down -v         #   chỉ khi đụng init.sql
 docker compose --env-file env/staging.env up -d --build     # bước 3
+# docker compose --env-file env/staging.env restart nginx   #   chỉ khi đụng nginx.conf
 docker compose --env-file env/staging.env ps                #   phải thấy 5 dòng Up
 npm test                                                    # bước 4, phải thấy pass 7
 
 (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của staging
 
+# docker compose --env-file env/prod.env down -v            #   chỉ khi đụng init.sql
 docker compose --env-file env/prod.env up -d --build        # bước 5
+# docker compose --env-file env/prod.env restart nginx      #   chỉ khi đụng nginx.conf
 docker compose --env-file env/prod.env ps                   #   phải thấy 5 dòng Up
 $env:BASE_URL = 'http://localhost:8080'; npm test           # bước 6, phải thấy pass 7
 $env:BASE_URL = $null
 
 (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của prod, dừng đồng hồ
 ```
-
-Nếu thay đổi lần này có đụng vào `infra/nginx/nginx.conf` thì thêm `restart nginx` sau mỗi lệnh `up`, xem bước 3.
-
-Nếu có đụng vào `infra/postgres/init.sql` thì thêm `down -v` **trước** mỗi lệnh `up`, cũng xem bước 3.
 
 Bất kỳ bước nào không cho ra kết quả như ghi ở trên thì dừng lại, xem mục "Khi có sự cố"; đồng hồ vẫn chạy.
 
@@ -116,6 +127,15 @@ git log -1 --format='%h %s'
 ```
 
 Ghi lại SHA ngắn vừa hiện ra vào cột `Commit`.
+
+Rồi xem lần merge này đụng những file nào:
+
+```sh
+git --no-pager show --stat HEAD
+```
+
+Danh sách đó quyết định hai bước có điều kiện ở bước 3 và bước 5, nên phải biết ngay từ đây chứ không phải lúc đã đứng trước lệnh `up`.
+Thấy `infra/postgres/init.sql` thì bước 3 và bước 5 có thêm `down -v`, thấy `infra/nginx/nginx.conf` thì có thêm `restart nginx`.
 
 Mốc merge lấy từ GitHub, không lấy từ `git log`, vì thời điểm tác giả commit không phải thời điểm thay đổi vào `main`:
 
