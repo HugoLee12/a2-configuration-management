@@ -12,7 +12,7 @@ Repo này là đồ án A2 của học phần CNTT313E1 (Chuyên đề kỹ thu�
 - **Nghiệp vụ giữ tối giản.** Hệ demo tồn tại để pipeline có thứ để build và phát hành. Không thêm tính năng nghiệp vụ.
 - **Trunk-based xuyên suốt**, không đổi chiến lược nhánh giữa chừng vì sẽ làm hỏng phép so sánh.
 - **Mọi thay đổi đi qua issue rồi pull request**, theo `CONTRIBUTING.md`. Nhánh `main` được bảo vệ và từ chối push thẳng. Pull request thiếu dòng `Closes #<số>` sẽ làm gãy mắt xích truy vết dùng để tính lead time, trừ đúng một ngoại lệ đã ghi trong `CONTRIBUTING.md` là pull request chỉ ghi Nhật ký thủ công.
-- **Ticket đóng thì thêm một mục vào `docs/nhat-ky-du-an.md`.** Đây là vật liệu để viết báo cáo và slide ở tuần 15, bỏ qua thì không dựng lại được.
+- **Ticket đóng thì phải có một mục trong `docs/nhat-ky-du-an.md` nhắc tới nó.** Đây là vật liệu để viết báo cáo và slide ở tuần 15, bỏ qua thì không dựng lại được. Một mục gộp được nhiều ticket, và ticket quy trình mỏng thì gộp vào mục của ticket kế tiếp thay vì viết riêng; cái không được phép là để một ticket đóng mà không mục nào nhắc tới.
 - **Merge xong một ticket có chạm `services/`, `infra/`, `compose.yaml` hay `Dockerfile` thì dừng lại và nhắc chủ đồ án triển khai tay.** Nói rõ số pull request vừa merge và trỏ tới mục "Bảng lệnh" trong `docs/trien-khai-thu-cong.md`; đừng chép các bước ra chỗ khác, và đừng chạy hộ. Chạy hộ thì hai giai đoạn khác nhau ở hai biến chứ không phải một, vì sang Giai đoạn pipeline sẽ không có ai gõ lệnh cả. Ticket chỉ đụng tài liệu thì không cần nhắc.
 - Ngôn ngữ duy nhất là TypeScript; triển khai bằng Docker Compose, không Kubernetes, không PaaS.
 
