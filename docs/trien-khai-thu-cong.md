@@ -28,6 +28,15 @@ Các lệnh `npm test` và `npm run typecheck` đã có sẵn từ #3 thì vẫn
 
 Đọc kỹ mục này trước lần triển khai đầu tiên, vì số đo sai không sửa lại được.
 
+Một lần triển khai cần lấy giờ **ba lần**, cộng thêm một mốc lấy từ GitHub:
+
+| Mốc | Lấy ở đâu | Điền vào |
+|---|---|---|
+| `Merge` | `gh pr view <số> --json mergedAt`, không phải giờ hiện tại | cả hai dòng |
+| `Bắt đầu` | ngay trước bước 1 | cả hai dòng |
+| `Hoàn tất` | ngay sau khi bước 4 xanh | dòng staging |
+| `Hoàn tất` | ngay sau khi bước 6 xanh | dòng prod |
+
 **Đồng hồ chạy từ lúc gõ ký tự đầu tiên của bước 1, và dừng khi bước 6 xanh.**
 Không dừng đồng hồ ở giữa vì bất cứ lý do gì: đọc lại tài liệu, tra lỗi, chờ image build, sửa sự cố, đi lấy nước.
 Toàn bộ khoảng đó là chi phí thật của việc triển khai tay, và đó chính là thứ cần đo.
@@ -119,6 +128,12 @@ npm test
 
 Bộ kiểm thử mặc định bắn vào `http://localhost:8081`.
 Phải xanh toàn bộ thì mới được đụng tới prod.
+
+Xanh thì lấy giờ ngay và ghi vào cột `Hoàn tất` của **dòng staging**.
+Đây là mốc giữa, dễ quên nhất trong cả quy trình, vì cảm giác lúc đó là mới làm được nửa việc chứ chưa xong cái gì.
+Bỏ mốc này thì về sau không tách được thời gian triển khai staging khỏi thời gian triển khai prod, mà #10 cần cả hai để nói được rằng phần lớn thời gian rơi vào đâu.
+
+Đồng hồ **không** dừng ở đây, nó chạy tiếp sang bước 5.
 
 Nếu đỏ, xem mục sự cố ở dưới.
 Đồng hồ vẫn chạy.
