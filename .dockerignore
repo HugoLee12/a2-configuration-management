@@ -1,0 +1,5 @@
+*
+!package.json
+!package-lock.json
+!services/
+services/**/node_modules

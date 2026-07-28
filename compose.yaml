@@ -1,0 +1,59 @@
+# Một định nghĩa stack duy nhất, chạy được thành nhiều môi trường bằng cách đổi
+# file env. Xem README.md để biết lệnh dựng staging và prod.
+
+x-postgres-env: &postgres-env
+  PGHOST: postgres
+  PGUSER: links
+  PGPASSWORD: ${POSTGRES_PASSWORD}
+  PGDATABASE: links
+
+x-service: &service
+  build: .
+  image: ${COMPOSE_PROJECT_NAME}-service
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: links
+      POSTGRES_USER: links
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U links -d links"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  link:
+    <<: *service
+    command: ["node", "services/link/src/index.ts"]
+    environment:
+      <<: *postgres-env
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+
+  redirect:
+    <<: *service
+    command: ["node", "services/redirect/src/index.ts"]
+    environment: *postgres-env
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT}:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - link
+      - redirect
+
+volumes:
+  postgres-data:
