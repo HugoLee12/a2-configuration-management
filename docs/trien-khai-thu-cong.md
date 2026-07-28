@@ -139,8 +139,17 @@ docker compose --env-file env/prod.env restart nginx
 ### Bước 6: nghiệm thu prod
 
 ```sh
-BASE_URL=http://localhost:8080 npm test
+BASE_URL=http://localhost:8080 npm test                    # Git Bash
 ```
+
+```powershell
+$env:BASE_URL = 'http://localhost:8080'; npm test          # PowerShell
+$env:BASE_URL = $null                                      # xoá ngay sau khi chạy xong
+```
+
+Dòng thứ hai của bản PowerShell là bắt buộc, không phải cho gọn.
+Bash đặt biến cho đúng một lệnh rồi thôi, còn PowerShell giữ biến cho tới hết phiên terminal.
+Quên xoá thì lần triển khai sau, bước 4 tưởng là đang kiểm thử staging nhưng thật ra vẫn bắn vào prod, và nó sẽ xanh nên không có gì báo cho biết.
 
 Xanh toàn bộ thì **dừng đồng hồ** và ghi vào cột `Hoàn tất`.
 
