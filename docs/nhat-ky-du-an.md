@@ -112,3 +112,68 @@ Repo có tài liệu bối cảnh, bốn ADR, quy ước truy vết thay đổi,
 Chưa có dòng nào của ba service TypeScript.
 
 Ticket tiếp theo là #3 (A2), đã hết blocker.
+
+---
+
+## 2026-07-28 - Lập nhật ký dự án và bắt phiên sau đọc được quy ước
+
+**Ticket**: #26 (A5), #28 (A6), và chính mục này ghi trong #30 (A7)
+**Pull request**: #27, #29
+**Phục vụ**: không thuộc mục nào của Chương 25, đây là hạ tầng để viết báo cáo ở tuần 15 và để quy ước vừa dựng không bị bỏ quên
+
+### Vấn đề
+
+Sau khi #2 và #24 xong thì repo đã có quy trình, nhưng chưa có chỗ nào ghi **vì sao** một việc được làm và **nó phục vụ mục nào** của đề tài.
+
+Issue và pull request ghi được cái gì đã đổi.
+ADR ghi được quyết định kiến trúc và các phương án đã loại.
+Phần tường thuật ở giữa thì không nằm ở đâu cả, mà đó lại đúng là thứ cần cho báo cáo 12-15 trang và cho slide.
+
+Để nguyên thì tới tuần 15 phải dựng lại mạch chuyện từ lịch sử commit và các issue đã đóng, đúng vào lúc bận nhất, và những chi tiết kiểu "phép thử đầu tiên sai ở chỗ nào" sẽ mất hẳn vì không ai nhớ nổi sau vài tuần.
+
+Vấn đề thứ hai lộ ra ngay sau đó: `CLAUDE.md` là file mọi phiên làm việc đọc đầu tiên, mà nó không nhắc tới `CONTRIBUTING.md` lẫn nhật ký.
+Một quy ước không được nhắc trong file luật thì trên thực tế là không tồn tại.
+
+### Đã thay đổi những gì
+
+Ba thứ, qua hai pull request.
+
+`docs/nhat-ky-du-an.md`: file này, xếp theo thứ tự thời gian, mục mới thêm vào cuối, mỗi ticket đóng thì ghi một mục.
+Viết theo lối giải thích cho người chưa biết gì về việc đó, vì mục tiêu là lấy thẳng làm nội dung báo cáo chứ không phải để tra cứu.
+
+`CONTEXT.md`: thêm thuật ngữ **Nhật ký dự án** vào từ điển.
+
+`CLAUDE.md`: thêm hai ràng buộc, mọi thay đổi đi qua issue rồi pull request theo `CONTRIBUTING.md`, và ticket đóng thì thêm một mục vào nhật ký.
+Chỉ trỏ tới hai file kia chứ không chép nội dung sang, để sau này sửa một chỗ không phải nhớ sửa chỗ thứ hai.
+
+### Chuyện đáng kể lại
+
+**Hai loại nhật ký suýt bị lẫn.**
+Đồ án đã có sẵn khái niệm **Nhật ký thủ công** (#4, chưa lập): bản ghi thời điểm bắt đầu và kết thúc của từng lần build và triển khai tay, là dữ liệu số để tính lead time của Giai đoạn thủ công.
+Cái vừa lập tên gần giống hệt nhưng bản chất khác hẳn, nó là ghi chú tường thuật và không chứa số đo nào.
+Hai thứ này mà lẫn thì hỏng cả hai: nhật ký nghiên cứu bị pha văn xuôi, còn ghi chú tường thuật bị ép vào khuôn bảng biểu.
+Vì vậy phải đưa thuật ngữ mới vào `CONTEXT.md` ngay, chứ không để tự phân biệt bằng trí nhớ.
+
+**Repo vi phạm luật do chính nó vừa merge.**
+Pull request #29 đưa vào `CLAUDE.md` câu "ticket đóng thì thêm một mục vào nhật ký", nhưng lúc nó được merge thì #26 và #28 đã đóng mà chưa có mục nào.
+Phát hiện ngay nên sửa được bằng chính ticket #30 này.
+
+Chuyện nhỏ nhưng đúng bài: một quy tắc chỉ có giá trị khi có cơ chế phát hiện lúc nó bị vi phạm.
+Ở đây cơ chế đó vẫn là mắt người, và đó là hạn chế thật của Giai đoạn thủ công, cần nêu ra khi báo cáo bàn về giới hạn của phép đo.
+
+**Tài liệu cũng là configuration item.**
+Bốn thay đổi đầu tiên của repo đều không đụng tới dòng mã nào, nhưng tất cả đều đi qua đúng quy trình issue, nhánh, pull request, merge.
+Đây là minh hoạ trực tiếp cho ý của mục 25.1: quản lý cấu hình đặt dưới kiểm soát mọi sản phẩm của dự án chứ không riêng mã nguồn.
+
+### Dẫn chứng
+
+- `docs/nhat-ky-du-an.md`, `CONTEXT.md` mục Nhật ký dự án, `CLAUDE.md` mục Ràng buộc phải tôn trọng
+- Vòng đời thay đổi: issue #26 với pull request #27, issue #28 với pull request #29, issue #30 với mục này
+
+### Đang ở đâu sau mục này
+
+Phần dựng nền quy trình khép lại.
+Repo có: tài liệu bối cảnh và từ điển thuật ngữ, bốn ADR, quy ước truy vết thay đổi có hiệu lực cưỡng chế, nhật ký dự án, và `main` được bảo vệ.
+
+Vẫn chưa có dòng nào của ba service TypeScript.
+Ticket tiếp theo là #3 (A2), chỗ bắt đầu viết mã của Hệ thống demo.
