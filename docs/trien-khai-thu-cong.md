@@ -37,7 +37,7 @@ npm run typecheck                                           # bước 2
 docker compose --env-file env/staging.env up -d --build     # bước 3
 # docker compose --env-file env/staging.env restart nginx   #   chỉ khi đụng nginx.conf
 docker compose --env-file env/staging.env ps                #   phải thấy 5 dòng Up
-npm test                                                    # bước 4, phải thấy pass 7
+npm test                                                    # bước 4, phải thấy pass 10
 
 (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của staging
 
@@ -45,7 +45,7 @@ npm test                                                    # bước 4, phải 
 docker compose --env-file env/prod.env up -d --build        # bước 5
 # docker compose --env-file env/prod.env restart nginx      #   chỉ khi đụng nginx.conf
 docker compose --env-file env/prod.env ps                   #   phải thấy 5 dòng Up
-$env:BASE_URL = 'http://localhost:8080'; npm test           # bước 6, phải thấy pass 7
+$env:BASE_URL = 'http://localhost:8080'; npm test           # bước 6, phải thấy pass 10
 $env:BASE_URL = $null
 
 (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của prod, dừng đồng hồ
