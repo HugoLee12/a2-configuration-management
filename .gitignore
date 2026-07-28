@@ -1,0 +1,13 @@
+# Tài liệu học tập có bản quyền, không đưa lên kho công khai
+*.pdf
+
+# Node
+node_modules/
+dist/
+coverage/
+*.log
+
+# Môi trường
+.env
+.env.*
+!.env.example
