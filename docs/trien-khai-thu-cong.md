@@ -7,6 +7,39 @@ Số đo thu được ghi vào `docs/nhat-ky-thu-cong.md` và là vế "trước
 
 Cách chạy hệ và hình dạng của hệ nằm ở `README.md`; ở đây chỉ nói thứ tự các bước và kỷ luật ghi giờ.
 
+## Bảng lệnh
+
+Mục này là toàn bộ quy trình gói lại thành một khối chép được, dành cho người đã đọc phần "Các bước" ở dưới ít nhất một lần.
+Nó không phải bản rút gọn có quyền khác phần dưới: mỗi dòng ở đây tương ứng đúng một dòng ở đó, và khi sửa quy trình thì phải sửa cả hai chỗ.
+
+```powershell
+(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Bắt đầu, chép lại
+
+git checkout main                                           # bước 1
+git pull
+git log -1 --format='%h %s'                                 #   -> cột Commit
+gh pr view <số-pr> --json mergedAt                          #   -> cột Merge
+
+npm run typecheck                                           # bước 2
+
+docker compose --env-file env/staging.env up -d --build     # bước 3
+docker compose --env-file env/staging.env ps                #   phải thấy 4 dòng Up
+npm test                                                    # bước 4, phải thấy pass 4
+
+(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của staging
+
+docker compose --env-file env/prod.env up -d --build        # bước 5
+docker compose --env-file env/prod.env ps                   #   phải thấy 4 dòng Up
+$env:BASE_URL = 'http://localhost:8080'; npm test           # bước 6, phải thấy pass 4
+$env:BASE_URL = $null
+
+(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của prod, dừng đồng hồ
+```
+
+Nếu thay đổi lần này có đụng vào `infra/nginx/nginx.conf` thì thêm `restart nginx` sau mỗi lệnh `up`, xem bước 3.
+
+Bất kỳ bước nào không cho ra kết quả như ghi ở trên thì dừng lại, xem mục "Khi có sự cố"; đồng hồ vẫn chạy.
+
 ## Vì sao làm tay, và làm tay tới mức nào
 
 Giai đoạn này **cố ý không có pipeline**, theo `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md`.
