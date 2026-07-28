@@ -835,10 +835,14 @@ Khi tổng hợp ở #10, hai chỉ số này thuộc về hai ticket khác nhau
 Nhật ký thủ công có bốn dòng và hai lần phát hành thất bại trên hai mẫu, tức change failure rate của Giai đoạn thủ công tới giờ là 100%.
 Con số đó sẽ dịu đi khi có thêm mẫu, nhưng bản thân việc hai lần đầu đều hỏng đã là một dữ kiện đáng nói chứ không phải xui rủi.
 
-Hai chỗ mỏng đã lộ ra và chưa có ticket:
+Hai chỗ mỏng đã lộ ra, và đã thành ticket ngay trong phiên:
 
-- Bộ kiểm thử không in ra địa chỉ nó đang bắn vào, nên một lần chạy nhầm môi trường không để lại dấu vết nào. Đây chính là thứ đã che giấu sự cố của #5 suốt 65 phút.
-- `waitForStack` trả về ngay khi service `link` đáp 400, mà 400 không chạm cơ sở dữ liệu, nên nó báo sẵn sàng trong lúc Postgres còn đang khởi động. Lỗi này đã vấp phải một lần trong lúc phát triển #6, và nó sẽ thành test chập chờn khi #13 dùng lại bộ test này làm smoke test cho blue-green.
+- Bộ kiểm thử không in ra địa chỉ nó đang bắn vào, nên một lần chạy nhầm môi trường không để lại dấu vết nào. Đây chính là thứ đã che giấu sự cố của #5 suốt 65 phút. Thành **#50**, tách riêng vì nó là chuyện bộ kiểm thử tự nói ra nó đang chạy ở đâu, không dính gì tới endpoint sức khoẻ.
+- `waitForStack` trả về ngay khi service `link` đáp 400, mà 400 không chạm cơ sở dữ liệu, nên nó báo sẵn sàng trong lúc Postgres còn đang khởi động. Lỗi này đã vấp phải một lần trong lúc phát triển #6, và nó sẽ thành test chập chờn khi #13 dùng lại bộ test này làm smoke test cho blue-green. **Gộp vào #7** thành một tiêu chí nghiệm thu, vì endpoint sẵn sàng mà #7 dựng lên chính là tín hiệu đúng mà cổng gác đang thiếu.
 
-Ticket tiếp theo là #7 (B3), endpoint sức khoẻ và sẵn sàng cho ba service.
-Nó chạm đúng vào chỗ mỏng thứ hai ở trên, nên hai việc nên được cân nhắc cùng nhau.
+Chỗ gộp và chỗ tách ở trên là một quyết định có cân nhắc, không phải tuỳ hứng.
+`CONTRIBUTING.md` cấm gom nhiều việc rời rạc vào một issue vì lead time tính theo từng issue, nên gộp cả hai vào #7 sẽ làm hỏng mẫu đo "cỡ chuẩn thứ ba".
+Ngược lại, tách `waitForStack` ra riêng thì nó phải chờ #7 xong mới làm được, và lúc đó chỉ còn là vài dòng đổi chỗ cổng gác trỏ tới, tức một issue không đủ một việc có nghĩa.
+
+Thứ tự đề nghị cho phiên sau là **#50 trước, rồi #7**.
+#50 mỏng và chỉ chạm `tests/`, làm xong thì lần triển khai kế tiếp đã có dấu vết môi trường trong đầu ra, thay vì lại phải suy đoán như lần này.
