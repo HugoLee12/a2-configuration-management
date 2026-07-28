@@ -422,3 +422,134 @@ Từ ticket sau, mỗi thay đổi merge vào `main` sẽ được triển khai 
 
 Ticket tiếp theo là #5 (B1), service thống kê lượt truy cập.
 Đây là ticket đầu tiên có số đo, và cũng là ticket đầu tiên có hai service gọi nhau qua mạng.
+
+---
+
+## 2026-07-28 - Đếm lượt truy cập, service thứ ba và lần đổi schema đầu tiên
+
+**Ticket**: #5 (B1)
+**Pull request**: #38
+**Phục vụ**: ô Kiến trúc 25% của Rubric; và là thay đổi cỡ chuẩn đầu tiên được bấm giờ, nên nó mở đầu phần dữ liệu của Giai đoạn thủ công
+
+### Ticket đòi cái gì
+
+Mỗi lần một mã ngắn được truy cập thì hệ ghi lại sự kiện, một worker tổng hợp các sự kiện đó theo chu kỳ, và số lượt của một mã tra cứu được qua API.
+
+Ràng buộc quan trọng nhất không nằm ở chỗ đếm được, mà ở chỗ **phần đếm không được nằm trên đường chuyển hướng**.
+Dừng worker thì chuyển hướng vẫn phải chạy bình thường.
+Đây chính là yêu cầu số 32 trong danh sách của #1: sự cố ở nhánh phụ không được kéo sập chức năng chính.
+
+Ticket cũng là thay đổi cỡ chuẩn đầu tiên của Giai đoạn thủ công, nghĩa là nó phải được triển khai tay lên cả staging lẫn prod và sinh ra hai dòng đầu tiên của Nhật ký thủ công.
+
+### Đã thay đổi những gì
+
+Service thứ ba, `services/stats/`, là một worker chạy nền không phơi cổng nào và không nằm sau nginx.
+
+Đường đi của một lượt truy cập bây giờ gồm hai chặng tách rời.
+Service `redirect` ghi mỗi lượt thành một dòng trong bảng `visits` rồi trả 302 như cũ.
+Worker `stats` cứ mỗi giây rút toàn bộ hàng đợi đó ra và cộng dồn vào bảng `link_stats`.
+Service `link` phơi số đã cộng dồn qua `GET /api/v1/links/:code/stats`.
+
+Việc tổng hợp gói trong đúng một câu lệnh SQL, dùng `delete ... returning` làm nguồn cho `insert ... on conflict do update`.
+Nhờ vậy việc xoá hàng đợi và việc cộng số cùng thành công hoặc cùng bị huỷ, không có kẽ nào làm mất hay đếm đôi sự kiện, mà không phải tự quản lý con trỏ đọc hay đánh dấu dòng đã xử lý.
+
+Bảng `visits` cố ý không có khoá chính, không có chỉ mục và không có cả cột thời gian.
+Nó là hàng đợi chứ không phải kho lưu trữ: dòng vừa ghi vào đã bị rút ra trong vòng một giây, nên mọi thứ thêm vào đó đều là chi phí ghi mà không ai đọc.
+
+Phần dùng chung của bộ kiểm thử được tách ra `tests/stack.ts`, vì cổng gác "chờ stack sẵn sàng" của #3 giờ có hai file cần tới.
+Kéo theo một chỉnh nhỏ trong `tsconfig.json`: Node đòi đường dẫn import phải ghi đúng đuôi `.ts` vì nó bóc kiểu chứ không biên dịch, nên phải bật `allowImportingTsExtensions`.
+
+### Vì sao việc này thuộc về đề tài
+
+Nghiệp vụ vẫn nhạt như chủ ý của `docs/adr/0002-he-thong-demo-va-stack.md`, nhưng hình dạng của hệ thì vừa đổi thật.
+
+Trước ticket này, hai service của Hệ thống demo chỉ khác nhau ở đường dẫn nginx đấu vào; cả hai đều là tiến trình HTTP đứng chờ request.
+Bây giờ có một thành phần thuộc loại khác hẳn: không có cổng, không ai gọi được nó, vòng đời của nó là một vòng lặp nền.
+Ô Kiến trúc 25% của Rubric đòi hệ phân tán thật, và một hệ chỉ gồm các service đối xứng nhau thì khó gọi là phân tán theo nghĩa thú vị.
+
+Nó cũng tạo ra thứ mà các ticket sau cần tới.
+`#7` phải trả lời câu hỏi "một worker không có cổng thì báo sức khoẻ kiểu gì".
+`#13` triển khai blue-green phải quyết định worker đi theo stack nào khi hai stack chạy song song trên cùng một cơ sở dữ liệu.
+Cả hai câu hỏi đó chỉ tồn tại vì thành phần này tồn tại.
+
+### Chuyện đáng kể lại
+
+**Cái bẫy schema, và nó tự lộ ra đúng lúc.**
+
+Đây là lần đầu repo đổi `infra/postgres/init.sql`.
+Postgres chỉ chạy file đó đúng một lần, lúc khởi tạo một volume rỗng.
+Hai môi trường staging và prod đã có volume từ #3, nên hai bảng mới sẽ không bao giờ được tạo, dù file trên đĩa đã đúng và image đã build lại.
+
+Tái hiện trước khi sửa: dựng staging trên volume cũ rồi chạy bộ kiểm thử.
+
+```
+ℹ tests 7
+ℹ pass 4
+ℹ fail 3
+```
+
+Ba test mới đỏ vì service trả 500, không phải vì một thông báo nào nói rằng thiếu bảng.
+Triệu chứng nằm cách nguyên nhân đúng một tầng, và đây là loại lỗi sẽ tốn rất nhiều phút nếu bung ra giữa lúc đang bấm giờ.
+
+Cách xử lý chọn đúng khuôn đã có sẵn trong `docs/trien-khai-thu-cong.md`: tài liệu đó vốn đã có một quy tắc dạng "nếu thay đổi đụng vào `nginx.conf` thì thêm `restart nginx`", nên thêm một quy tắc cùng dạng cho `init.sql` là `down -v` trước mỗi lệnh `up`.
+Đổi lại là mất sạch dữ liệu của môi trường đó, chấp nhận được vì cả hai môi trường chỉ chứa dữ liệu thử.
+
+Phương án còn lại đã cân nhắc là cho service tự chạy `create table if not exists` lúc khởi động, khỏi phải xoá volume.
+Bị loại vì nó đặt schema vào hai chỗ, và vì bước thủ công thêm vào kia chính là chi phí thật của việc triển khai tay khi chưa có migration, tức là đúng thứ Giai đoạn thủ công sinh ra để đo.
+Dựng hẳn cơ chế migration thì phình phạm vi ticket, và bản thân bước chạy migration tự động lại chạm vào lằn ranh "không tự động hoá" của giai đoạn này.
+
+**Bốn test cũ vẫn xanh trong lúc ba test mới đỏ.**
+
+Chỗ này ban đầu chỉ là một lần chạy hỏng, nhưng nhìn kỹ thì nó là bằng chứng cho đúng tiêu chí khó kiểm nhất của ticket.
+Lúc đó bảng `visits` không tồn tại, nghĩa là mỗi lần chuyển hướng đều có một câu lệnh SQL ném lỗi.
+Chuyển hướng vẫn 302, tạo link vẫn 201, vì lệnh ghi sự kiện được bọc `try/catch` và không ai chờ kết quả của nó.
+
+**Tiêu chí "dừng worker thì chuyển hướng vẫn chạy" không kiểm tự động được.**
+
+Bộ kiểm thử chỉ được đi qua nginx bằng HTTP, mà worker cố ý không nằm sau nginx, nên không có đường nào từ trong test với tới nó.
+Viết một test tự gọi `docker compose stop` thì phá seam đó, và tệ hơn là `#13` định dùng lại chính bộ test này làm smoke test cho blue-green: một smoke test tự dừng container của stack vừa dựng là thứ không được phép tồn tại.
+
+Nên tiêu chí này kiểm bằng tay, và log để ở ngay đây:
+
+```
+--- worker đã dừng ---
+a2-staging-link-1       running
+a2-staging-nginx-1      running
+a2-staging-postgres-1   running
+a2-staging-redirect-1   running
+--- chuyển hướng khi worker chết ---
+GET /qQI0v0l -> 302 https://example.com/kiem-chung-worker
+GET /qQI0v0l -> 302 https://example.com/kiem-chung-worker
+--- tạo link mới khi worker chết ---
+POST /api/v1/links -> 201
+--- thống kê lúc worker còn chết ---
+{"code":"qQI0v0l","visits":0}
+--- thống kê sau khi worker sống lại ---
+{"code":"qQI0v0l","visits":2}
+```
+
+Hai dòng cuối nói thêm một điều không nằm trong tiêu chí: hai lượt truy cập lúc worker chết không mất, chúng nằm chờ trong bảng `visits` và được cộng vào ngay chu kỳ đầu tiên sau khi worker sống lại.
+Tức là dừng worker làm số lượt **chậm**, chứ không làm nó **sai**.
+Đây là khác biệt đáng nêu trong báo cáo khi bàn về việc tách một chức năng ra khỏi đường đi chính.
+
+### Đã kiểm chứng thế nào
+
+Kiểm tra kiểu sạch, bộ kiểm thử 7/7 xanh trên staging sau khi xoá volume và dựng lại.
+
+Lần chạy này là kiểm chứng lúc phát triển, không phải triển khai một thay đổi đã merge, nên không ghi vào Nhật ký thủ công.
+File dữ liệu đó chỉ chứa số đo của những lần triển khai thật, theo đúng cách #4 đã xử lý.
+
+### Dẫn chứng
+
+- Mã nguồn: `services/stats/`, `services/redirect/src/index.ts`, `services/link/src/index.ts`, `infra/postgres/init.sql`
+- Kiểm thử: `tests/thong-ke-luot-truy-cap.test.ts`, phần dùng chung ở `tests/stack.ts`
+- Quy tắc xoá volume khi đổi schema: `docs/trien-khai-thu-cong.md` bước 3 và bước 5
+- Vòng đời thay đổi: issue #5 với pull request #38
+
+### Đang ở đâu sau mục này
+
+Hệ thống demo đủ ba service, và lần đầu tiên có một thành phần không phơi cổng.
+Vẫn chưa có endpoint sức khoẻ, chưa có metrics, và cố ý chưa có pipeline.
+
+Hai dòng đầu tiên của Nhật ký thủ công sinh ra từ lần triển khai tay của chính thay đổi này, làm sau khi pull request được merge.
+Ticket tiếp theo là #6 (B2), xác thực địa chỉ đầu vào.
