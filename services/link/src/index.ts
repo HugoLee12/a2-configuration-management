@@ -5,6 +5,7 @@ import { Pool } from "pg";
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const CODE_LENGTH = 7;
 const MAX_ATTEMPTS = 5;
+const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
 
 // Pool đọc PGHOST/PGUSER/PGPASSWORD/PGDATABASE thẳng từ biến môi trường.
 const pool = new Pool();
@@ -25,9 +26,23 @@ app.use(express.json());
 // song mà không phải đổi đường dẫn cũ. Xem docs/adr/0002-he-thong-demo-va-stack.md.
 app.post("/api/v1/links", async (req, res) => {
   const url: unknown = req.body?.url;
-  // Kiểm tra tối thiểu để không ghi rác vào cơ sở dữ liệu; validate địa chỉ đầy đủ thuộc về #6.
-  if (typeof url !== "string" || url.trim() === "") {
-    res.status(400).json({ error: "Trường url phải là một chuỗi không rỗng" });
+  if (typeof url !== "string") {
+    res.status(400).json({ error: "Trường url phải là một chuỗi" });
+    return;
+  }
+
+  const parsed = URL.parse(url);
+  if (!parsed) {
+    res.status(400).json({ error: "Trường url không phải một địa chỉ hợp lệ" });
+    return;
+  }
+
+  // Mã ngắn chỉ dùng để chuyển hướng web, nên giao thức nào cũng nhận thì service
+  // redirect trở thành chỗ phát tán javascript: và data: dưới một địa chỉ trông sạch.
+  if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) {
+    res.status(400).json({
+      error: `Trường url chỉ chấp nhận giao thức http và https, không phải ${parsed.protocol.slice(0, -1)}`,
+    });
     return;
   }
 
