@@ -6,7 +6,10 @@ Mục đích là để tuần 15 viết báo cáo và dựng slide thì lấy th
 Vì vậy mỗi mục viết cho người chưa biết gì về việc đó, không viết theo lối gạch đầu dòng cho người đã biết.
 
 Xếp theo thứ tự thời gian, mục mới thêm vào cuối file.
-Mỗi ticket đóng lại thì thêm một mục, viết ngay lúc còn nhớ.
+Mỗi ticket đóng lại phải có một mục nhắc tới nó, viết ngay lúc còn nhớ.
+
+Một mục gộp được nhiều ticket khi chúng cùng kể một chuyện, và ticket quy trình mỏng thì gộp vào mục của ticket kế tiếp thay vì viết riêng.
+Cái không được phép là để một ticket đóng mà không mục nào nhắc tới, vì lúc viết báo cáo sẽ không ai biết nó từng tồn tại.
 
 ## File này khác Nhật ký thủ công ở chỗ nào
 
