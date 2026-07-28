@@ -46,6 +46,11 @@ _Avoid_: giai đoạn 2, giai đoạn hoàn thiện
 Bản ghi thời gian từng lần build và triển khai tay trong giai đoạn thủ công.
 Là dữ liệu nghiên cứu, phải ghi ngay lúc làm vì không dựng lại được sau.
 
+**Nhật ký dự án**:
+Ghi chú tường thuật theo thứ tự thời gian trong `docs/nhat-ky-du-an.md`, mỗi ticket đóng lại thì thêm một mục.
+Tồn tại để viết báo cáo và dựng slide, không chứa số đo nào và không thay thế Nhật ký thủ công.
+_Avoid_: nhật ký, changelog, worklog
+
 **Thí nghiệm tiêm lỗi**:
 Việc cố ý đẩy một thay đổi hỏng vào giai đoạn pipeline để đo thời gian phục hồi và tỷ lệ phát hành thất bại.
 Bù cho việc số lần hỏng tự nhiên trong một đồ án quá ít để có ý nghĩa.
