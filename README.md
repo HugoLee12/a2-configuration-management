@@ -4,6 +4,7 @@ Dịch vụ rút gọn URL, tồn tại để pipeline Configuration Management 
 Nghiệp vụ cố ý tối giản, xem `CONTEXT.md` và `docs/adr/0002-he-thong-demo-va-stack.md`.
 
 Bối cảnh đồ án nằm ở `CONTEXT.md`, quy ước đóng góp ở `CONTRIBUTING.md`, Nhật ký dự án ở `docs/nhat-ky-du-an.md`.
+Số liệu mốc của Giai đoạn thủ công nằm ở `docs/so-lieu-giai-doan-thu-cong.md`.
 
 ## Hình dạng của hệ
 
