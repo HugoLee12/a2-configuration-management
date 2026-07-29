@@ -161,27 +161,37 @@ Không cần `jq`: `gh` mang sẵn một bản jq bên trong và dùng qua cờ 
 ```powershell
 $merge = @{}
 gh pr list --state merged --base main --limit 50 --json mergeCommit,mergedAt,body `
-  --jq '.[] | [.mergeCommit.oid, .mergedAt, (.body | [scan("Closes #([0-9]+)")] | flatten | first // "-")] | @tsv' |
-  ForEach-Object { $sha, $luc, $issue = $_ -split "`t"; $merge[$sha] = "#$issue`t$luc" }
+  --jq '.[] | [.mergeCommit.oid, .mergedAt, ((.body // "") | [scan("Closes #([0-9]+)")] | flatten | first // "-")] | @tsv' |
+  ForEach-Object { $sha, $luc, $issue = $_ -split "`t"; $merge[$sha] = @($issue, $luc) }
 
-gh api "repos/{owner}/{repo}/actions/runs?event=push&branch=main&per_page=50" `
+gh api "repos/{owner}/{repo}/actions/runs?event=push&branch=main&status=completed&per_page=50" `
   --jq '.workflow_runs[] | [.id, .head_sha, .created_at, .conclusion, .run_attempt] | @tsv' |
   ForEach-Object {
     $id, $sha, $batdau, $ketluan, $lan = $_ -split "`t"
     $xong = gh api "repos/{owner}/{repo}/actions/runs/$id/jobs" --jq '[.jobs[].completed_at] | max'
-    "$($merge[$sha] ?? "-`t-")`t$($sha.Substring(0,7))`t$batdau`t$xong`t$ketluan`t$lan"
+    $pr = $merge[$sha] ?? @("-", "-")
+    "#$($pr[0])`t$($sha.Substring(0,7))`t$($pr[1])`t$batdau`t$xong`t$ketluan`t$lan"
   }
 ```
 
-Đầu ra là các cột `Thay đổi`, `Merge`, `Commit`, `Bắt đầu`, `Hoàn tất build`, `Kết luận`, `Lần chạy`, ngăn nhau bằng tab, mới nhất trước.
-Số issue lấy từ dòng `Closes #<số>` của thân pull request, tức đúng mắt xích truy vết mà `CONTRIBUTING.md` quy định; pull request không có dòng đó sẽ hiện `#-`.
+Đầu ra là bảy cột đúng thứ tự của bảng dưới, ngăn nhau bằng tab, mới nhất trước, nên chép sang bảng thì không phải đảo cột nào.
 
 Lệnh đã chạy thật lúc chốt ticket này, và đầu ra nguyên văn là:
 
 ```text
-#69	2026-07-29T13:39:09Z	748e69e	2026-07-29T13:39:17Z	2026-07-29T13:40:33Z	success	1
-#11	2026-07-29T13:17:36Z	a117d94	2026-07-29T13:17:40Z	2026-07-29T13:18:56Z	success	1
+#69	748e69e	2026-07-29T13:39:09Z	2026-07-29T13:39:17Z	2026-07-29T13:40:33Z	success	1
+#11	a117d94	2026-07-29T13:17:36Z	2026-07-29T13:17:40Z	2026-07-29T13:18:56Z	success	1
 ```
+
+Ba chi tiết trong khối lệnh là lựa chọn chứ không phải mặc định.
+
+`status=completed` loại các run đang chạy, vì một run chưa xong sẽ cho cột `Hoàn tất build` một giá trị chưa phải mốc kết thúc.
+
+Số issue lấy từ dòng `Closes #<số>` của thân pull request, tức đúng mắt xích truy vết mà `CONTRIBUTING.md` quy định.
+Dòng nào hiện `#-` là một cú push vào `main` không truy được về pull request nào, và những dòng đó **cố ý được giữ lại** chứ không lọc đi: `CONTRIBUTING.md` có mô tả một lối push thẳng hợp lệ, nên `#-` là thứ cần nhìn thấy để kiểm chứ không phải rác cần giấu.
+
+Giới hạn 50 là trần cứng ở cả hai lệnh.
+Giai đoạn pipeline sẽ không tới ngần ấy thay đổi, nhưng nếu có thì các mẫu cũ nhất rơi ra ngoài mà không báo gì, nên khi số dòng trích được chạm 50 thì phải nâng `--limit` và `per_page` chứ đừng đọc tiếp.
 
 Lệnh này chỉ **trích**, không ghi.
 Bảng dưới vẫn phải chép tay, vì đó là bản duy nhất sống lâu hơn chính sách lưu giữ của GitHub.
@@ -192,6 +202,7 @@ Bảng dưới vẫn phải chép tay, vì đó là bản duy nhất sống lâu
 
 **Log của job bị xoá theo chính sách lưu giữ.**
 Mặc định là 90 ngày, và với kho công khai thì 90 ngày cũng là mức trần không nâng được.
+Con số đó là trần chứ không phải cam kết: thiết lập ở mức kho, tổ chức hay doanh nghiệp đều hạ nó xuống được, nên khi cần một mốc chắc chắn thì phải tra thiết lập thật của kho chứ không trích lại con số này.
 Đồ án nộp trước hạn đó, nhưng mọi câu trả lời dạng "vì sao bước này chậm" hay "test nào đỏ" đều nằm trong log, nên cái gì cần cho báo cáo thì phải chép ra lúc còn đọc được.
 
 **Mốc thô thì phải chép vào kho mã.**
