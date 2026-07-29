@@ -48,6 +48,12 @@ Là dữ liệu nghiên cứu, phải ghi ngay lúc làm vì không dựng lại
 Đây là nguồn sự thật duy nhất cho mốc giờ thô, và nó cố ý không có cột nào tính sẵn.
 File khác trích lại một mốc thì được, giữ một bản thứ hai thì không.
 
+**Nhật ký pipeline**:
+Bản ghi thời gian của giai đoạn pipeline, ở `docs/nhat-ky-pipeline.md`, giữ đúng vai trò mà Nhật ký thủ công giữ cho giai đoạn trước.
+Nó cũng chốt luôn mỗi mốc lấy từ trường nào của GitHub Actions, vì dữ liệu do máy sinh nên phần khó là chọn trường chứ không phải ghi lại.
+Cũng như file kia, nó không có cột nào tính sẵn.
+_Avoid_: log CI, lịch sử Actions
+
 **Nhật ký dự án**:
 Ghi chú tường thuật theo thứ tự thời gian trong `docs/nhat-ky-du-an.md`, sao cho mọi ticket đã đóng đều được ít nhất một mục nhắc tới.
 Một mục gộp được nhiều ticket, và ticket quy trình mỏng thì gộp vào mục của ticket kế tiếp thay vì viết riêng; quy tắc đầy đủ ở `CLAUDE.md`.
