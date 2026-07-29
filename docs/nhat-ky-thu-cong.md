@@ -39,6 +39,8 @@ Mốc thô là thứ không dựng lại được nếu ghi sai, còn số dẫn
 | #6 | 555bc78 | prod | 2026-07-28T16:05 | 2026-07-28T16:06 | 2026-07-28T16:21 | phát hành thất bại, prod thiếu bảng từ #5, xem ghi chú |
 | #7 | 5a60048 | staging | 2026-07-29T02:39 | 2026-07-29T02:40 | 2026-07-29T02:42 | không, nhưng dòng này có thêm một bước đo, xem ghi chú khác |
 | #7 | 5a60048 | prod | 2026-07-29T02:39 | 2026-07-29T02:40 | 2026-07-29T02:43 | không |
+| #8 | eda7968 | staging | 2026-07-29T03:30 | 2026-07-29T03:32 | 2026-07-29T03:34 | không |
+| #8 | eda7968 | prod | 2026-07-29T03:30 | 2026-07-29T03:32 | 2026-07-29T03:34 | không, nhưng hai mốc `Hoàn tất` trùng phút, xem ghi chú khác |
 
 ## Ghi chú sự cố
 
@@ -164,3 +166,15 @@ Kết quả quan sát được, trên `link`:
 
 Prod không chạy bước này, nên cột `Hoàn tất` của dòng `#7` `prod` so sánh trực tiếp được với các mẫu trước.
 Khi tổng hợp ở #10, dòng staging của #7 phải trừ hao, hoặc dùng dòng prod làm đại diện cho mẫu này.
+
+### #8 prod
+
+Cột `Hoàn tất` của dòng này trùng phút với cột `Hoàn tất` của dòng staging cùng thay đổi, nên phần triển khai prod đo ra 0 phút.
+
+Con số đó là sàn phân giải của đồng hồ, không phải một phép đo bằng không.
+Định dạng mốc giờ của file này là `YYYY-MM-DDTHH:MM`, nên mọi khoảng ngắn hơn một phút đều rơi về 0.
+
+Bước 5 của lần này không build lại lớp nào: `COPY services/ services/` báo `CACHED`, vì bước 3 vừa build đúng nội dung đó cho staging.
+Bước 5 vì vậy chỉ còn xuất image và dựng lại container.
+
+Khi tổng hợp ở #10, dòng này dùng được làm cận trên của chi phí triển khai tay thuần tuý, không dùng được làm giá trị điểm.
