@@ -43,14 +43,22 @@ Giai đoạn sau, khi pipeline đã bật, đo lại trên cùng loại thay đ�
 _Avoid_: giai đoạn 2, giai đoạn hoàn thiện
 
 **Nhật ký thủ công**:
-Bản ghi thời gian từng lần build và triển khai tay trong giai đoạn thủ công.
+Bản ghi thời gian từng lần build và triển khai tay trong giai đoạn thủ công, ở `docs/nhat-ky-thu-cong.md`.
 Là dữ liệu nghiên cứu, phải ghi ngay lúc làm vì không dựng lại được sau.
+Đây là nguồn sự thật duy nhất cho mốc giờ thô, và nó cố ý không có cột nào tính sẵn.
+File khác trích lại một mốc thì được, giữ một bản thứ hai thì không.
 
 **Nhật ký dự án**:
 Ghi chú tường thuật theo thứ tự thời gian trong `docs/nhat-ky-du-an.md`, sao cho mọi ticket đã đóng đều được ít nhất một mục nhắc tới.
 Một mục gộp được nhiều ticket, và ticket quy trình mỏng thì gộp vào mục của ticket kế tiếp thay vì viết riêng; quy tắc đầy đủ ở `CLAUDE.md`.
-Tồn tại để viết báo cáo và dựng slide, không chứa số đo nào và không thay thế Nhật ký thủ công.
+Tồn tại để viết báo cáo và dựng slide, không chứa số đo gốc và không thay thế Nhật ký thủ công.
+Mục nào trích số dẫn xuất thì phải trỏ được về Nhật ký thủ công, để hai file không cùng làm nguồn sự thật cho một con số.
 _Avoid_: nhật ký, changelog, worklog
+
+**Số liệu mốc**:
+Bảng số dẫn xuất chốt lại một giai đoạn đo, ở `docs/so-lieu-giai-doan-thu-cong.md` cho Giai đoạn thủ công.
+Nó khai báo công thức của từng đại lượng rồi tính từ Nhật ký thủ công, nên sửa được bằng cách tính lại chứ không phải bằng cách nhớ.
+_Avoid_: bảng tổng hợp, báo cáo số liệu
 
 **Thí nghiệm tiêm lỗi**:
 Việc cố ý đẩy một thay đổi hỏng vào giai đoạn pipeline để đo thời gian phục hồi và tỷ lệ phát hành thất bại.

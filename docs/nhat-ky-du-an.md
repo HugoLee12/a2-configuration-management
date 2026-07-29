@@ -19,7 +19,13 @@ Cái không được phép là để một ticket đóng mà không mục nào n
 Nó là dữ liệu nghiên cứu để tính lead time của Giai đoạn thủ công, phải ghi ngay lúc làm vì không dựng lại được sau.
 
 **Nhật ký dự án** là file này, ghi chú tường thuật để viết báo cáo.
-Nó không chứa số đo nào, và không thay thế được Nhật ký thủ công.
+Nó không chứa số đo gốc, và không thay thế được Nhật ký thủ công.
+
+Ranh giới nằm ở chữ "gốc".
+Một mục được phép trích số dẫn xuất khi con số đó là một phần của câu chuyện đang kể, nhưng mốc giờ thô thì chỉ nằm ở Nhật ký thủ công, và mục nào trích thì phải nói rõ nó lấy từ đâu.
+Cái bị cấm là hai file cùng làm nguồn sự thật cho một con số, vì lúc đó không ai biết file nào đúng khi chúng lệch nhau.
+
+Bảng số chốt lại của cả một giai đoạn thì không thuộc về file này, nó nằm ở `docs/so-lieu-giai-doan-thu-cong.md`.
 
 ---
 
@@ -1263,3 +1269,159 @@ Cho tới khi việc đó xong thì mọi con số về chi phí triển khai pr
 
 Sau #10 là hết giai đoạn.
 Từ #11 trở đi pipeline mới được dựng, và mọi con số của năm mẫu hiện có sẽ trở thành mốc so sánh cố định, không sửa lại được nữa.
+
+---
+
+## 2026-07-29 - Đóng Giai đoạn thủ công, và cái giá của việc chốt một định nghĩa muộn
+
+**Ticket**: #10 (B6)
+**Pull request**: #66
+**Phục vụ**: cổng chặn của cả đồ án, mọi việc thuộc pipeline chỉ được bắt đầu sau mục này; đồng thời là bảng số mốc cho mục so sánh hai giai đoạn trong báo cáo
+
+### Ticket đòi cái gì
+
+#10 đòi biến năm mẫu đo của Giai đoạn thủ công thành một bảng số dùng được, gồm lead time trung bình và trung vị, tần suất triển khai, và một nhận xét về mức độ đồng đều của kích thước các thay đổi.
+
+Nó cũng là cổng chặn.
+Nếu số mẫu chưa đủ hoặc các thay đổi lệch cỡ nhau quá nhiều thì phải bổ sung thêm thay đổi cỡ chuẩn trước khi đóng, và pipeline phải chờ.
+
+Ngoài ra #10 nhận hai việc mà mục trước cố ý để lại: cột prod đang được tính theo hai cách khác nhau, và định nghĩa của chính file này đang nói sai về chính nó.
+
+### Đã thay đổi những gì
+
+Ba file, không đụng một dòng mã nào của Hệ thống demo.
+
+`docs/so-lieu-giai-doan-thu-cong.md` là file mới, chứa toàn bộ bảng số của giai đoạn.
+Nó mở đầu bằng một bảng định nghĩa nói rõ mỗi đại lượng trừ mốc nào cho mốc nào, rồi mới tới số; thứ tự đó là cố ý, vì việc phải sửa ở #10 sinh ra chính từ chỗ trước đây có số mà không có định nghĩa.
+
+`CONTEXT.md` và phần đầu file này sửa cùng một câu, và thêm một mục từ vựng mới.
+
+### Việc thứ nhất: cột prod, và vì sao chọn cách trừ từ staging
+
+Bảng ở mục của #8, tức "2026-07-29 - Số liệu vận hành, và một lỗi mà hai mươi test xanh không thấy", tính cột prod cho #5 và #6 theo mốc `Bắt đầu`, còn cho #7 và #8 theo mốc `Hoàn tất` của staging.
+Với #9 thì hai cách cho ra 3 phút và 1 phút, chênh gấp ba.
+
+Bảng đó từ đây được thay bằng bảng năm mẫu trong `docs/so-lieu-giai-doan-thu-cong.md`, mục "Bảng năm mẫu".
+Nó không bị sửa đè, nên khi báo cáo trích số thì phải trích từ file mới chứ không từ mục nhật ký cũ.
+
+Chỗ này chọn cách trừ từ `Hoàn tất` của staging, vì một lý do kiểm chứng được chứ không phải vì nó nhỏ hơn.
+
+Hai dòng của cùng một thay đổi dùng chung mốc `Bắt đầu`, bởi người thao tác mở đúng một phiên rồi chạy staging trước, prod sau.
+Cách trừ từ staging là cách duy nhất giữ được đẳng thức `chờ + staging + prod = lead time`; cách kia làm cột prod nuốt trọn cột staging vào bên trong, nên hai cột cộng lại sẽ đếm đôi khoảng chung.
+Đẳng thức đó không phải chuyện thẩm mỹ: nó là thứ khiến bảng tự kiểm được, và nó đã được kiểm cho cả năm mẫu.
+
+Cái giá phải trả được ghi ngay cạnh bảng.
+Con số ở cột prod là chi phí biên của môi trường thứ hai, không phải chi phí một lần triển khai prod độc lập, vì bước 5 hưởng nguyên cache build mà bước 3 vừa tạo.
+Mẫu #8 cho thấy điều đó ở dạng thuần nhất, khi lớp `COPY services/ services/` báo `CACHED` và cột prod rơi về 0 phút.
+Giai đoạn thủ công không có mẫu nào đo được chi phí prod đứng một mình, và đó là một giới hạn của bộ dữ liệu chứ không phải một con số cần đi tìm thêm.
+
+### Chuyện đáng kể lại: hai con số cho cùng một mẫu, và vì sao trung vị thắng
+
+Khi tính lại cả năm mẫu theo một luật thì #5 lộ ra một chỗ mà không luật nào xử lý được.
+
+Bảng ghi prod của #5 xanh lúc `2026-07-28T15:18`, và mục đính chính trong Nhật ký thủ công đã chứng minh mốc đó sai: `down -v` chưa bao giờ chạy, prod hỏng liên tục, và schema của #5 chỉ thật sự có mặt trên prod lúc `2026-07-28T16:21`, trong lần triển khai của #6.
+Đọc theo mốc đã ghi thì lead time của #5 là 14 phút; đọc theo nghĩa "thay đổi chạy được trên prod" thì là 77 phút.
+
+Cả hai đều có lý, và không có cách nào chọn một mà không mất cái kia, nên bảng ghi cả hai.
+Bảng chính giữ 14 phút, vì đó là con số duy nhất tính được bằng cùng một luật với bốn mẫu còn lại, và vì luật đo của đồ án định nghĩa `Hoàn tất` là lúc bộ kiểm thử báo xanh chứ không phải lúc hệ thật sự đúng.
+
+Điều đáng kể lại là hệ quả lên hai chỉ số, trích từ mục "Lead time của #5 có một giá trị thứ hai" trong `docs/so-lieu-giai-doan-thu-cong.md`:
+
+| Cách tính lead time của #5 | Trung bình | Trung vị |
+|---|---|---|
+| Theo mốc đã ghi, 14 phút | 8,6 | 5 |
+| Theo mốc phục hồi thật, 77 phút | 21,2 | 5 |
+
+Trung bình chênh gần hai lần rưỡi.
+Trung vị không nhúc nhích.
+
+Vì vậy #22 phải lấy trung vị làm số chính khi so sánh hai giai đoạn, còn trung bình chỉ đi kèm để nói về đuôi phân phối.
+Với cỡ mẫu bằng năm thì một mẫu bất thường đủ sức lái trung bình đi bất cứ đâu, và bộ dữ liệu này vừa cho thấy chuyện đó bằng chính nó chứ không bằng lý thuyết.
+
+### Việc thứ hai: một định nghĩa nói sai về chính nó
+
+`CONTEXT.md` và phần đầu file này cùng viết rằng Nhật ký dự án "không chứa số đo nào".
+Nhưng bốn mục gần nhất đều có phần `### Số liệu`, và mục của #9 có tới hai bảng số.
+Thực tế đã lệch khỏi định nghĩa từ ngày 2026-07-28, và mục này thì sắp thêm một bảng nữa.
+
+Đây cùng loại với chỗ lệch mà #60 đã gỡ trong đúng đoạn văn đó, chỉ là câu còn lại.
+
+Cách sửa là làm rõ ý định thật thay vì siết thực tế cho khớp câu chữ cũ.
+Điều cần chống không phải là con số xuất hiện trong file kể chuyện, mà là hai file cùng làm nguồn sự thật cho một con số, vì lúc chúng lệch nhau thì không ai biết file nào đúng.
+Câu mới vì vậy là "không chứa số đo **gốc**", kèm ràng buộc rằng mốc giờ thô chỉ nằm ở Nhật ký thủ công và mục nào trích số dẫn xuất thì phải trỏ được về đó.
+
+Đồ án bây giờ có ba file mang số, nên `CONTEXT.md` nhận thêm mục từ vựng **Số liệu mốc** để lần sau không ai phải đoán file nào giữ vai trò gì:
+
+| File | Vai trò |
+|---|---|
+| `docs/nhat-ky-thu-cong.md` | Mốc giờ thô, không có cột tính sẵn. Nguồn sự thật. |
+| `docs/so-lieu-giai-doan-thu-cong.md` | Số dẫn xuất, kèm công thức. Tính lại được từ file trên. |
+| `docs/nhat-ky-du-an.md` | Kể chuyện, trích số khi câu chuyện cần. |
+
+### Vì sao việc này thuộc về đề tài
+
+Chương 25 gồm bốn phần, và phần dễ bị hiểu nhầm nhất là quản lý phiên bản không chỉ áp cho mã.
+
+Hai việc mà #10 vừa giải đều không phải việc về mã, và cả hai đều là lỗi cấu hình theo đúng nghĩa của chương: một định nghĩa chỉ số bị hai chỗ hiểu khác nhau, và một tài liệu mô tả sai trạng thái của chính hệ mà nó mô tả.
+Chúng không làm hệ thống hỏng, nên không cổng gác nào bắt được; chúng làm **số liệu** hỏng, mà số liệu mới là sản phẩm của giai đoạn này.
+
+Có một điểm nữa đáng đưa vào báo cáo, và nó không hiển nhiên.
+Bảng ở `docs/nhat-ky-thu-cong.md` được thiết kế từ #5 với đúng một quy tắc là không chứa cột nào tính sẵn.
+Nhờ vậy khi phát hiện cột prod bị tính hai cách, không có dữ liệu nào phải bỏ và không lần triển khai nào phải làm lại: cả năm mẫu dựng lại được theo định nghĩa mới trong vài phút.
+Nếu bảng đó đã lưu sẵn số phút thì chỗ lệch này sẽ tốn năm lần triển khai tay để sửa, mà giai đoạn thì đã hết thay đổi cỡ chuẩn để triển khai.
+Tách dữ liệu thô khỏi số dẫn xuất là một quyết định rẻ lúc dựng và đắt lúc thiếu, và đây là lần thứ hai nó trả cổ tức.
+
+### Cổng đóng giai đoạn
+
+Bốn điều kiện của #10 đều đạt.
+
+Nhật ký thủ công có 10 lần triển khai một môi trường trên 5 thay đổi, vượt mức tám mà tiêu chí nghiệm thu đòi.
+Lead time trung bình 8,6 phút và trung vị 5 phút.
+Tần suất là 5 lần lên prod trong cửa sổ 18 giờ.
+Kích thước các thay đổi đủ đồng đều, với ba cảnh báo đã ghi.
+
+Không cần bổ sung thay đổi cỡ chuẩn nào nữa, nên giai đoạn đóng tại đây.
+
+### Số liệu
+
+Bảng đầy đủ ở `docs/so-lieu-giai-doan-thu-cong.md`; phần dưới chỉ là bốn con số sẽ bị nhắc lại nhiều nhất.
+
+| Chỉ số | Giai đoạn thủ công |
+|---|---|
+| Lead time, trung vị | 5 phút |
+| Lead time, trung bình | 8,6 phút |
+| Tần suất triển khai prod | 5 lần trong 18 giờ |
+| Change failure rate | 2 trên 5, tức 40% |
+
+Ba cảnh báo đi kèm, không được trích số mà bỏ chúng lại.
+
+Cột staging đứng yên ở 2 phút suốt năm mẫu, nhưng đó là do đồng hồ chỉ phân giải tới phút, không phải do quy trình ổn định tới mức đó.
+Tần suất triển khai trông cao vì mẫu số là thời gian của một đợt làm dồn; ràng buộc thật của giai đoạn này là mỗi lần triển khai đều cần một người có mặt gõ lệnh.
+Và tỷ lệ 40% không có nghĩa là hai trong năm thay đổi bất kỳ sẽ hỏng, vì cả hai lần hỏng đều truy về đúng một thay đổi schema, mà #5 lại là thay đổi schema duy nhất của giai đoạn.
+
+Cảnh báo thứ ba kéo theo một yêu cầu lên Giai đoạn pipeline: phải có ít nhất một thay đổi đụng `infra/postgres/init.sql`, nếu không thì change failure rate của hai giai đoạn không so được với nhau.
+
+### Dẫn chứng
+
+- Bảng số và toàn bộ công thức: `docs/so-lieu-giai-doan-thu-cong.md`
+- Mốc giờ thô của cả năm mẫu: `docs/nhat-ky-thu-cong.md`, mục "Bảng"
+- Bằng chứng cho lead time 77 phút của #5: cùng file, mục "Đính chính, phát hiện lúc triển khai #6"
+- Bảng cũ tính cột prod theo hai cách, giữ nguyên không sửa đè và đã bị thay: mục "2026-07-29 - Số liệu vận hành, và một lỗi mà hai mươi test xanh không thấy" của file này, tức mục của #8
+
+### Đang ở đâu sau mục này
+
+**Giai đoạn thủ công đã đóng.**
+Năm mẫu đo là mốc cố định từ đây tới hết đồ án, và không được ghi thêm dòng nào vào `docs/nhat-ky-thu-cong.md` nữa.
+Nhóm B hết ticket.
+
+Từ đây pipeline được phép dựng, bắt đầu ở **#11** (C1, reusable workflow kiểm thử và đóng gói image), ticket đã hết blocker.
+#15 (D1, Prometheus và Grafana trong compose) cũng vừa được gỡ chặn bởi mục này.
+
+Hai thứ mục này để lại cho các ticket sau, cả hai đều đã ghi vào `docs/so-lieu-giai-doan-thu-cong.md` chứ không chỉ nằm ở đây.
+
+Thứ nhất, Giai đoạn pipeline cần ít nhất một thay đổi đụng `infra/postgres/init.sql`, nếu không thì change failure rate của hai giai đoạn không so được.
+Thứ hai, #22 phải lấy trung vị làm số chính chứ không phải trung bình, vì lý do đã trình bày ở phần về #5.
+
+Còn một điều cần nhớ khi sang giai đoạn sau, và nó không nằm trong ticket nào.
+Từ #11 trở đi sẽ không còn ai gõ lệnh triển khai nữa, nên cũng không còn ai bấm giờ.
+Mốc thời gian của Giai đoạn pipeline phải lấy từ GitHub Actions, và cách lấy nó cần được chốt sớm chứ không phải lúc #22 ngồi tính.

@@ -29,6 +29,9 @@ Cột `Merge` lặp lại giống nhau ở cả hai dòng của cùng một thay
 Bảng cố ý không có cột nào chứa số phút đã tính sẵn.
 Mốc thô là thứ không dựng lại được nếu ghi sai, còn số dẫn xuất thì tính lúc nào cũng được; việc tính lead time và các chỉ số DORA thuộc về #10 và #22.
 
+**Giai đoạn thủ công đã đóng ngày 2026-07-29 khi #10 xong, và bảng dưới không nhận thêm dòng nào nữa.**
+Số dẫn xuất từ năm mẫu này nằm ở `docs/so-lieu-giai-doan-thu-cong.md`, kèm công thức của từng đại lượng và ba chỗ phải trừ hao khi trích.
+
 ## Bảng
 
 | Thay đổi | Commit | Môi trường | Merge | Bắt đầu | Hoàn tất | Sự cố |
