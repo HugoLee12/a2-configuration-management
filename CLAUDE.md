@@ -35,7 +35,7 @@ Mã nguồn ở `services/`, hạ tầng ở `infra/` và `compose.yaml`, kiểm
 Cách dựng, cách chạy và hình dạng của hệ nằm ở `README.md`; đừng chép lại vào đây.
 
 Ba service là `link`, `redirect` và `stats`.
-`stats` là worker chạy nền, không nằm trên đường phục vụ request nào, nhưng vẫn với tới được bằng HTTP qua hai đường dẫn thăm dò; xem `README.md`.
+`stats` là worker chạy nền, không nằm trên đường phục vụ request nào, nhưng vẫn với tới được bằng HTTP qua các đường dẫn vận hành dưới `/internal/`; xem `README.md`.
 
 Hai ràng buộc dễ vi phạm nếu không biết trước:
 

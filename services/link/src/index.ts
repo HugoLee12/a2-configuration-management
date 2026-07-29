@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
 import express from "express";
+import { Counter } from "prom-client";
+import { mountMetrics, registry } from "../../shared/src/metrics.ts";
 import { mountProbes, pool } from "../../shared/src/service.ts";
 
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -16,7 +18,23 @@ function generateCode(): string {
   return Array.from(randomBytes(CODE_LENGTH), (byte) => ALPHABET[byte % ALPHABET.length]).join("");
 }
 
+// Khai báo ở đây chứ không ở phần dùng chung: ba service dùng chung một image,
+// nên counter khai báo chung sẽ khiến service này phơi cả số của service kia ở
+// giá trị 0, và Prometheus gộp cùng một tên chỉ số từ hai job thì đếm đôi.
+const linksCreated = new Counter({
+  name: "links_created_total",
+  help: "Số link ngắn đã tạo thành công",
+  registers: [registry],
+});
+
 const app = express();
+
+// Trước `express.json()`, không chỉ trước các route. Body hỏng hoặc quá cỡ bị
+// chính body-parser từ chối bằng `next(err)`, mà `next(err)` nhảy thẳng tới
+// error handler và bỏ qua mọi middleware đăng ký sau nó. Đặt sau thì đúng những
+// mã 400 và 413 đó biến mất khỏi số đếm, tức là mất đúng phần mà một số đếm
+// phân theo mã trạng thái cần thấy nhất.
+mountMetrics(app);
 app.use(express.json());
 mountProbes(app);
 
@@ -51,6 +69,7 @@ app.post("/api/v1/links", async (req, res) => {
       [code, url],
     );
     if (rowCount) {
+      linksCreated.inc();
       res.status(201).json({ code, shortUrl: `${process.env.PUBLIC_BASE_URL}/${code}` });
       return;
     }

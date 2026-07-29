@@ -22,10 +22,10 @@ export function createLink(body: unknown): Promise<Response> {
 
 export const SERVICES = ["link", "redirect", "stats"] as const;
 
-/** Gọi một đường dẫn thăm dò của một service, vẫn qua nginx như mọi request khác. */
+/** Gọi một đường dẫn vận hành của một service, vẫn qua nginx như mọi request khác. */
 export function probe(
   service: (typeof SERVICES)[number],
-  name: "healthz" | "readyz",
+  name: "healthz" | "readyz" | "metrics",
 ): Promise<Response> {
   return fetch(`${BASE_URL}/internal/${service}/${name}`);
 }

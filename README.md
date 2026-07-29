@@ -22,22 +22,26 @@ Service thứ ba là `stats`, một worker chạy nền.
 Mỗi lượt truy cập một mã ngắn được service `redirect` ghi thành một dòng trong bảng `visits`, rồi worker rút hàng đợi đó ra theo chu kỳ và cộng dồn vào bảng `link_stats`.
 Vì vậy worker không nằm trên đường chuyển hướng: dừng nó thì chuyển hướng vẫn chạy bình thường, chỉ có số lượt là đứng yên cho tới khi nó sống lại.
 
-## Sức khoẻ và sẵn sàng
+## Sức khoẻ, sẵn sàng và số liệu
 
-Cả ba service, kể cả worker, trả lời hai đường dẫn thăm dò dưới `/internal/<service>/`, với `<service>` là `link`, `redirect` hoặc `stats`.
+Cả ba service, kể cả worker, trả lời ba đường dẫn vận hành dưới `/internal/<service>/`, với `<service>` là `link`, `redirect` hoặc `stats`.
 
 | Đường dẫn | Trả lời gì | Chạm cơ sở dữ liệu |
 |---|---|---|
 | `/internal/<service>/healthz` | 200 chừng nào tiến trình còn nhận được request | không |
 | `/internal/<service>/readyz` | 200 nếu chạy được `select 1`, 503 nếu không | có |
+| `/internal/<service>/metrics` | số liệu vận hành theo định dạng phơi bày của Prometheus | không |
 
 ```sh
 curl localhost:8081/internal/stats/readyz
 # {"status":"sẵn sàng"}
 ```
 
-Hai câu hỏi này cố ý tách bạch: tiến trình còn chạy không có nghĩa là nó phục vụ được.
+Hai câu hỏi đầu cố ý tách bạch: tiến trình còn chạy không có nghĩa là nó phục vụ được.
 `/readyz` là tín hiệu mà cơ chế phát hành blue-green dùng để quyết định chuyển lưu lượng hay huỷ bản mới, và cũng là cổng gác mà bộ kiểm thử chờ trước khi chạy test đầu tiên.
+
+`/metrics` phơi số đếm request theo endpoint và mã trạng thái, phân bố độ trễ, các số đếm tiến trình Node, cùng số đếm nghiệp vụ riêng của từng service: `links_created_total` ở `link`, `redirects_total` ở `redirect`, `stats_aggregation_cycles_total` và `stats_visits_aggregated_total` ở `stats`.
+Nhãn `endpoint` là mẫu route chứ không phải đường dẫn thô, nên mọi lượt chuyển hướng gom về một nhãn `/:code` thay vì mỗi mã ngắn một chuỗi thời gian.
 
 Nhánh `/internal/` là lối duy nhất hỏi được `stats`, vì worker không nằm trên đường phục vụ request nào.
 
