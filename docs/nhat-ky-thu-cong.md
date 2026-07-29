@@ -41,6 +41,8 @@ Mốc thô là thứ không dựng lại được nếu ghi sai, còn số dẫn
 | #7 | 5a60048 | prod | 2026-07-29T02:39 | 2026-07-29T02:40 | 2026-07-29T02:43 | không |
 | #8 | eda7968 | staging | 2026-07-29T03:30 | 2026-07-29T03:32 | 2026-07-29T03:34 | không |
 | #8 | eda7968 | prod | 2026-07-29T03:30 | 2026-07-29T03:32 | 2026-07-29T03:34 | không, nhưng hai mốc `Hoàn tất` trùng phút, xem ghi chú khác |
+| #9 | 805a55c | staging | 2026-07-29T09:13 | 2026-07-29T09:15 | 2026-07-29T09:17 | không, nhưng bước 3 có kéo lại hai image nền, xem ghi chú khác |
+| #9 | 805a55c | prod | 2026-07-29T09:13 | 2026-07-29T09:15 | 2026-07-29T09:18 | không |
 
 ## Ghi chú sự cố
 
@@ -178,3 +180,14 @@ Bước 5 của lần này không build lại lớp nào: `COPY services/ servic
 Bước 5 vì vậy chỉ còn xuất image và dựng lại container.
 
 Khi tổng hợp ở #10, dòng này dùng được làm cận trên của chi phí triển khai tay thuần tuý, không dùng được làm giá trị điểm.
+
+### #9 staging
+
+Bước 3 của dòng này kéo lại hai image nền trước khi build: `postgres:17-alpine` mất 11,6 giây và `nginx:1.29-alpine` mất 11,5 giây, chạy song song.
+Bốn mẫu trước không có phần này trong đầu ra của bước 3.
+
+Nguyên nhân không xác định được từ chỗ đứng của bản ghi này, nên không ghi ra đây.
+Điều xác định được là hai khoảng đó nằm trong đồng hồ, theo đúng quy tắc "không dừng đồng hồ ở giữa vì bất cứ lý do gì".
+
+Cột `Hoàn tất` của dòng này vì vậy cao hơn một lần triển khai không phải kéo image, dù nó vẫn rơi vào cùng con số 2 phút như bốn mẫu trước.
+Khi tổng hợp ở #10, đây là một lý do nữa để đọc cột staging như một dải giá trị chứ không phải một hằng số.
