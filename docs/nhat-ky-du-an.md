@@ -1425,3 +1425,160 @@ Thứ hai, #22 phải lấy trung vị làm số chính chứ không phải trun
 Còn một điều cần nhớ khi sang giai đoạn sau, và nó không nằm trong ticket nào.
 Từ #11 trở đi sẽ không còn ai gõ lệnh triển khai nữa, nên cũng không còn ai bấm giờ.
 Mốc thời gian của Giai đoạn pipeline phải lấy từ GitHub Actions, và cách lấy nó cần được chốt sớm chứ không phải lúc #22 ngồi tính.
+
+---
+
+## 2026-07-29 - Mốc đầu của Giai đoạn pipeline, và một cái tag nói dối
+
+**Ticket**: #11 (C1)
+**Pull request**: #68
+**Phục vụ**: mục 25.2 và 25.4 của báo cáo, phần continuous integration và build; đồng thời là dẫn chứng chính cho ô Reuse & trade-off của rubric
+
+### Ticket đòi cái gì
+
+#11 đòi một workflow dùng chung cho cả ba service, chạy trên mỗi pull request: cài phụ thuộc, kiểm tra kiểu, lint, chạy bộ kiểm thử qua nginx, rồi đóng gói image và đẩy lên registry với tag theo commit.
+Kèm theo là hai tiêu chí không nói về việc chạy được: pull request có kiểm thử trượt thì không merge được, và thời gian chạy từng bước phải đọc được từ giao diện Actions để về sau còn đo lead time.
+
+Đây là thay đổi mở màn Giai đoạn pipeline, tức thay đổi đầu tiên sau khi #10 đóng sổ Giai đoạn thủ công.
+Nó cũng là ticket đầu tiên mà cả hai giai đoạn cùng tồn tại trong repo, nên phần khó nhất không phải viết YAML mà là nói rõ biến nào vừa đổi và biến nào cố tình giữ nguyên.
+
+### Đã thay đổi những gì
+
+Bốn thứ, không đụng một dòng nào trong `services/`.
+
+`.github/workflows/ci.yml` là cổng gác của mọi pull request.
+Job `kiem-tra` chạy `npm run typecheck`, `npm run lint`, `docker compose up --build` rồi `npm test`; job `dong-goi` chỉ chạy khi `kiem-tra` xanh.
+Workflow chạy trên cả `push` vào `main`, vì merge bằng squash sinh ra một commit mới chứ không phải commit head của pull request, mà commit mới ấy lại đúng là commit #12 sẽ phải triển khai.
+
+`.github/workflows/image.yml` là đơn vị dùng lại, khai báo `workflow_call`, nhận vào một input `tag` và đẩy `ghcr.io/hugolee12/a2-configuration-management:<sha>`.
+
+`oxlint` được thêm vào vì repo chưa có linter nào, mà tiêu chí nghiệm thu đòi lint là một cổng gác riêng bên cạnh `tsc`.
+Chọn oxlint vì nó là đúng một devDependency và chạy được không cần file cấu hình; bộ mã hiện tại sạch nên không phải sửa dòng nào.
+
+Branch protection của `main` nhận thêm `required_status_checks` với context `kiem-tra` và `strict: true`.
+Đây là thay đổi cấu hình trên GitHub chứ không nằm trong file nào của repo, giống hệt tình huống của #2, nên nó chỉ để lại dấu vết ở mục này và ở thân pull request #68.
+
+### Chỗ đi lệch khỏi ticket, và vì sao tham số hoá theo service là dẫn chứng sai
+
+#11 viết rõ là workflow "nhận tham số là tên service".
+Bản merge không nhận tham số đó, và đây là lựa chọn có chủ đích chứ không phải bỏ sót.
+
+Lý do nằm ở một quyết định cũ hơn, từ #3.
+Ba service đã dùng chung đúng một `Dockerfile`, một image và một npm workspace; container nào chạy service nào là do `command` trong `compose.yaml` quyết định.
+Bộ kiểm thử thì là hộp đen chạy trên cả stack và không tách theo service được.
+Nghĩa là ở mức CI không còn việc gì là riêng của từng service nữa: một input `service` sẽ chỉ đổi được cái tên trên tag, trong khi ba image sinh ra giống nhau tới từng byte.
+
+Đẩy ba tag như vậy sẽ là **dẫn chứng sai** cho ô Reuse của rubric, vì nó khoe một sự tái sử dụng ở đúng tầng mà repo đã không còn vấn đề đó nữa.
+Ba bản sao chép chỉ là lãng phí khi chúng thật sự khác nhau; ở đây chúng sẽ giống nhau, nên việc gộp chúng lại không chứng minh được điều gì.
+
+Chỗ tái sử dụng thật vì vậy được đặt **giữa các workflow** thay vì giữa ba service.
+`image.yml` là `workflow_call`, `ci.yml` gọi nó hôm nay, và #12 với #13 sẽ gọi lại chính file đó thay vì chép bước build sang chỗ khác.
+Hai tiêu chí nghiệm thu liên quan vẫn đạt nguyên văn: ba service dùng chung một base image, và image được đẩy lên GHCR với tag theo commit.
+
+Đây là vật liệu cho vế "phân tích lựa chọn" của ô Reuse & trade-off, đi cạnh `docs/adr/0004-ha-tang-phat-hanh-va-do-luong.md`.
+ADR đó viết trước khi có mã, và câu của nó là "ba service dùng chung một reusable workflow"; mục này là chỗ ghi lại rằng khi đi vào chi tiết thì trục tái sử dụng đã dịch một tầng, và vì sao dịch.
+Báo cáo nên trích cả hai chứ không chỉ trích ADR, vì một quyết định kiến trúc được kiểm chứng rồi điều chỉnh thì đáng kể hơn một quyết định được chép lại y nguyên.
+
+### Một cái tag nói dối, cùng họ với hai việc của #10
+
+Bản đầu của pull request #68 để `actions/checkout` chạy với thiết lập mặc định.
+
+Trên sự kiện `pull_request`, mặc định ấy lấy `refs/pull/N/merge`, tức commit merge tạm mà GitHub dựng ra để thử ghép nhánh vào `main`.
+Commit đó không tồn tại trên nhánh nào và sẽ biến mất.
+Hệ quả là image mang nội dung của commit tạm, nhưng lại đeo tag là SHA của commit thật trên nhánh.
+
+Điều đáng nói là không có gì báo động cả.
+Toàn bộ hai mươi test vẫn xanh, image vẫn dựng được, vẫn đẩy được lên GHCR, vẫn chạy được nếu đem ra kéo về.
+Thứ hỏng là **mối tương ứng giữa cái tag và nội dung bên trong**, tức đúng mắt xích truy vết mà #22 cần để nối một thay đổi với lần triển khai của nó.
+
+Lỗi này được bắt bởi code review, không bởi test, và không có cổng gác tự động nào trong repo có khả năng bắt nó.
+Đó là điều làm nó cùng họ với hai việc mà #10 vừa gỡ: một định nghĩa chỉ số bị hai chỗ hiểu khác nhau, và một tài liệu mô tả sai trạng thái của chính hệ mà nó mô tả.
+Cả ba đều không làm hệ thống hỏng, nên không test nào đỏ; cả ba đều làm **số liệu** hỏng, mà số liệu mới là sản phẩm của đồ án này.
+
+Cách sửa là chỉ đích danh ref trong `image.yml`, `ref: ${{ inputs.tag }}`, và lấy tag từ `github.event.pull_request.head.sha` chứ không từ `github.sha`.
+Cả hai chỗ đều có comment giải thích ngay tại chỗ, vì đây là loại lỗi mà lần sau nhìn vào sẽ thấy dòng `ref:` là thừa.
+
+Có một chi tiết nhỏ hơn cùng lúc: giá trị của biểu thức đi vào thân script qua `env:` chứ không nội suy thẳng, vì `tag` là đầu vào do phía gọi truyền vào và một reusable workflow thì không được tin đầu vào của nó.
+
+### Cổng gác phải kiểm cả chiều đỏ
+
+Tiêu chí "pull request có kiểm thử trượt thì không merge được" không nghiệm thu được bằng cách nhìn một lần chạy xanh.
+Một lần chạy xanh chỉ chứng minh workflow chạy, không chứng minh nó chặn.
+
+Nên nó được kiểm bằng cách làm hỏng thật.
+Commit `7269971` cố ý thêm một test trượt vào nhánh, và ba thứ xảy ra đúng như mong đợi: `kiem-tra` đỏ, pull request chuyển sang `mergeStateStatus: BLOCKED`, và job `dong-goi` bị `SKIPPED` nên không có image nào được đẩy cho một commit hỏng.
+Commit `7e2744a` gỡ file đó ra và pull request trở lại `CLEAN`.
+
+Hai commit ấy cố ý được giữ lại trong lịch sử nhánh, vì lần chạy đỏ gắn với SHA của chúng chính là bằng chứng; squash merge thì không đưa chúng lên `main` nên lịch sử trunk vẫn sạch.
+
+Cách nghiệm thu này cần được lặp lại chứ không chỉ ghi lại.
+#13 phải chứng minh rollback tự động **có chạy** khi phát hành hỏng, và #21 thì cả bài toán là tiêm lỗi rồi đo thời gian phục hồi.
+Cả hai đều không nghiệm thu được bằng một lần chạy thành công, đúng như ở đây.
+
+### Vì sao việc này thuộc về đề tài
+
+Chương 25 đặt continuous integration ở 25.2 và build ở 25.4, và cả hai phần đều nói về cùng một ý: tự động hoá không có giá trị nếu không ai tin được đầu ra của nó.
+
+Ba việc trong mục này đều là về chữ "tin" đó chứ không về chữ "tự động".
+Cổng gác được kiểm cả chiều đỏ thì mới tin được là nó chặn.
+Tag được buộc chặt vào nội dung thì mới tin được là image nào ứng với thay đổi nào.
+Và trục tái sử dụng được đặt đúng chỗ thì con số về công sức tiết kiệm được mới có nghĩa.
+
+Bài học của #10 lặp lại ở đây với một hình dạng khác.
+Lần đó, thứ hỏng là một định nghĩa; lần này, thứ suýt hỏng là một tham chiếu.
+Cả hai đều nằm ngoài tầm với của bộ kiểm thử, và cả hai đều được bắt bởi một người đọc lại chính thứ mình vừa viết.
+
+### Biến vừa đổi, và ba món nợ
+
+Đây là chỗ phải nói cho chính xác, nếu không thì phép so sánh ở #22 không giải thích được.
+
+Từ mục này, **build không còn làm tay nữa**.
+Nhưng **triển khai thì vẫn làm tay**, theo `docs/trien-khai-thu-cong.md`, cho tới khi #12 tự động hoá staging và #13 tự động hoá prod.
+Nghĩa là hai giai đoạn hiện đang khác nhau ở **một phần** của biến chứ chưa khác trọn vẹn, và mọi con số đo trong khoảng giữa này đều là số của một trạng thái lai.
+
+Ba món nợ, đều đã ghi trong pull request #68 và nhắc lại ở đây vì thân pull request không phải nơi người viết báo cáo tìm tới.
+
+**Image được đẩy không phải image đã qua kiểm thử.**
+`kiem-tra` dựng bằng `compose --build` để có stack mà chạy test, còn `dong-goi` dựng lại từ đầu ở một job khác.
+Cùng nội dung nên rủi ro thấp, nhưng về nguyên tắc thì thứ được kiểm và thứ được phát hành là hai artefact khác nhau, và nó tốn thêm thời gian trên mỗi lần chạy.
+
+**Mỗi thay đổi để lại hai lần chạy**, một ở pull request và một trên `main` sau khi squash.
+#67 phải nói rõ lần nào được tính vào lead time, vì chọn nhầm thì con số lệch đi cả một vòng chạy mà vẫn trông hợp lý.
+
+**`oxlint` chạy không có file cấu hình** nên chỉ bật nhóm rule mặc định.
+Báo cáo đừng trích "đã có lint" mà không nói là ở mức nào.
+
+### Số liệu
+
+Mục này cố ý không có bảng số, và lý do của việc đó đáng ghi lại.
+
+Giai đoạn pipeline đã có mẫu đo đầu tiên chạy thật trên runner, nhưng chưa có định nghĩa để đọc nó.
+GitHub Actions phơi ra `created_at`, `run_started_at`, `updated_at` của một workflow run và `started_at`, `completed_at` của từng job, mỗi trường cho ra một con số trông hợp lý.
+Chốt trường nào là mốc chính thức thuộc phạm vi #67, và đó chính là bài học của #10 được áp dụng sớm một lần: định nghĩa phải có mặt trước mẫu đo, không phải sau.
+
+Con số duy nhất trích ở đây là con số không cần định nghĩa mới đọc được.
+Bộ kiểm thử chạy trên runner cho `tests 20 / pass 20 / fail 0`, đúng bằng con số của Giai đoạn thủ công, nên việc chuyển sang chạy tự động không đổi tập lỗi mà nó nhìn thấy.
+Ranh giới hộp đen của #3 vẫn nguyên, và nhận xét ở mục của #9 vẫn đúng nguyên văn: chúng chạy nhanh hơn, rẻ hơn, không quên lần nào, còn số lượng thứ chúng không nhìn thấy thì y nguyên.
+
+### Dẫn chứng
+
+- Lập luận về việc không tham số hoá theo service: comment đầu file `.github/workflows/image.yml`, và thân pull request #68
+- Lỗi tag không khớp nội dung và cách sửa: comment tại bước `actions/checkout` trong `.github/workflows/image.yml`, và tại input `tag` trong `.github/workflows/ci.yml`
+- Bằng chứng cổng gác chặn được: các lần chạy Actions gắn với commit `7269971` và `7e2744a` trên nhánh của pull request #68
+- Lần chạy xanh đầu tiên và image tương ứng: commit `53fd4f5`, log của job xác nhận `HEAD is now at 53fd4f5`
+- Quyết định kiến trúc gốc: `docs/adr/0004-ha-tang-phat-hanh-va-do-luong.md`
+- Trạng thái pipeline hiện tại theo góc nhìn người dùng repo: mục "Pipeline" trong `README.md`
+
+### Đang ở đâu sau mục này
+
+**Giai đoạn pipeline đã mở**, và build là phần đầu tiên rời khỏi tay người.
+Triển khai vẫn làm tay, nên `docs/trien-khai-thu-cong.md` vẫn còn hiệu lực; `docs/nhat-ky-thu-cong.md` thì không, nó đã đóng sổ ở #10 và không nhận thêm dòng nào.
+
+Ticket kế tiếp là **#67** (C0, chốt cách lấy mốc thời gian của Giai đoạn pipeline từ GitHub Actions), đã hết blocker nhờ mục này vì nó cần ít nhất một workflow run thật để kiểm chứng các trường.
+Nó nên được làm trước #12, vì #12 sẽ sinh thêm mẫu đo và mọi mẫu chạy trước khi định nghĩa được chốt đều mang rủi ro phải đọc lại.
+
+**#12** (C2, triển khai staging tự động kèm smoke test) cũng đã hết blocker và sẽ là chỗ gọi lại `image.yml` lần đầu, tức phép thử thật cho quyết định về trục tái sử dụng ở trên.
+
+Còn **#70**, một ticket mở sau pull request #68: `CONTRIBUTING.md` và `docs/trien-khai-thu-cong.md` đều bị lệch khi ranh giới giai đoạn dịch chuyển, và cả hai đều mô tả đường đi của một thay đổi nên để lệch thì #22 dựng lại sai.
+
+Một yêu cầu từ mục trước vẫn còn nguyên và chưa ticket nào nhận: Giai đoạn pipeline cần ít nhất một thay đổi đụng `infra/postgres/init.sql`, nếu không thì change failure rate của hai giai đoạn không so được với nhau.
