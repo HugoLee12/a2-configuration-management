@@ -20,17 +20,30 @@ export function createLink(body: unknown): Promise<Response> {
   });
 }
 
+export const SERVICES = ["link", "redirect", "stats"] as const;
+
+/** Gọi một đường dẫn thăm dò của một service, vẫn qua nginx như mọi request khác. */
+export function probe(service: string, name: "healthz" | "readyz"): Promise<Response> {
+  return fetch(`${BASE_URL}/internal/${service}/${name}`);
+}
+
 /**
- * Chờ tới khi service link thật sự trả lời qua nginx.
- * Phải bắt đúng mã 400 chứ không phải "có trả lời là được": nginx hỏng upstream
- * thì trả 502, còn cửa /api/ bị đấu nhầm sang service redirect thì trả 404, nên
- * chỉ 400 mới chứng minh request đã đi tới đúng service.
+ * Chờ tới khi cả ba service báo sẵn sàng qua nginx.
+ *
+ * Phải là /readyz chứ không phải "có trả lời là được". Cổng gác cũ chờ service
+ * link đáp 400 cho một request thiếu url, mà nhánh 400 đó không chạm cơ sở dữ
+ * liệu, nên nó báo sẵn sàng trong lúc Postgres còn đang khởi động và test chạy
+ * ngay sau đó đỏ với mã 500.
+ *
+ * Hỏi cả ba service chứ không chỉ link, vì ba service khởi động không đồng thời,
+ * và #13 sẽ dùng lại đúng cổng gác này làm smoke test cho blue-green.
  */
 export async function waitForStack(): Promise<void> {
   const deadline = Date.now() + READY_TIMEOUT_MS;
   for (;;) {
     try {
-      if ((await createLink({})).status === 400) return;
+      const responses = await Promise.all(SERVICES.map((svc) => probe(svc, "readyz")));
+      if (responses.every((res) => res.status === 200)) return;
     } catch {
       // stack chưa nhận kết nối
     }

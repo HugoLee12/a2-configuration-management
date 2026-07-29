@@ -8,19 +8,40 @@ Bối cảnh đồ án nằm ở `CONTEXT.md`, quy ước đóng góp ở `CONTR
 ## Hình dạng của hệ
 
 ```
-người dùng -> nginx -+-> /api/v1/  -> service link     -+
-                     |                                  |
-                     +-> /<mã>     -> service redirect -+-> Postgres
-                                                        |
-                        worker stats (không có cổng) ---+
+người dùng -> nginx -+-> /api/v1/               -> service link     -+
+                     |                                               |
+                     +-> /<mã>                  -> service redirect -+-> Postgres
+                     |                                               |
+                     +-> /internal/stats/<probe> -> worker stats     -+
 ```
 
 nginx là cửa vào duy nhất.
-Hai service phía sau nó không bao giờ được gọi trực tiếp từ bên ngoài, kể cả bởi bộ kiểm thử.
+Ba service phía sau nó không bao giờ được gọi trực tiếp từ bên ngoài, kể cả bởi bộ kiểm thử; không service nào có mục `ports:` trong `compose.yaml`.
 
-Service thứ ba là `stats`, một worker chạy nền không phơi cổng nào.
+Service thứ ba là `stats`, một worker chạy nền.
 Mỗi lượt truy cập một mã ngắn được service `redirect` ghi thành một dòng trong bảng `visits`, rồi worker rút hàng đợi đó ra theo chu kỳ và cộng dồn vào bảng `link_stats`.
 Vì vậy worker không nằm trên đường chuyển hướng: dừng nó thì chuyển hướng vẫn chạy bình thường, chỉ có số lượt là đứng yên cho tới khi nó sống lại.
+
+## Sức khoẻ và sẵn sàng
+
+Cả ba service, kể cả worker, trả lời hai đường dẫn thăm dò dưới `/internal/<service>/`, với `<service>` là `link`, `redirect` hoặc `stats`.
+
+| Đường dẫn | Trả lời gì | Chạm cơ sở dữ liệu |
+|---|---|---|
+| `/internal/<service>/healthz` | 200 chừng nào tiến trình còn nhận được request | không |
+| `/internal/<service>/readyz` | 200 nếu chạy được `select 1`, 503 nếu không | có |
+
+```sh
+curl localhost:8081/internal/stats/readyz
+# {"status":"sẵn sàng"}
+```
+
+Hai câu hỏi này cố ý tách bạch.
+Tiến trình còn chạy không có nghĩa là nó phục vụ được, và nếu gộp lại thì mất Postgres sẽ thành tín hiệu khởi động lại container, trong khi khởi động lại không cứu được gì.
+`/readyz` là tín hiệu mà cơ chế phát hành blue-green dùng để quyết định chuyển lưu lượng hay huỷ bản mới, và cũng là cổng gác mà bộ kiểm thử chờ trước khi chạy test đầu tiên.
+
+Nhánh `/internal/` là lối duy nhất hỏi được `stats`, vì worker không nằm trên đường phục vụ request nào.
+Nó không nuốt mã ngắn nào: prefix `/internal/` dài 10 ký tự trong khi mã ngắn luôn đúng 7.
 
 ## Chạy hệ
 

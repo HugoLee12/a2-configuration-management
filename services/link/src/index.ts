@@ -1,14 +1,11 @@
 import { randomBytes } from "node:crypto";
 import express from "express";
-import { Pool } from "pg";
+import { mountProbes, pool } from "../../shared/src/service.ts";
 
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const CODE_LENGTH = 7;
 const MAX_ATTEMPTS = 5;
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
-
-// Pool đọc PGHOST/PGUSER/PGPASSWORD/PGDATABASE thẳng từ biến môi trường.
-const pool = new Pool();
 
 /**
  * Sinh mã ngắn ngẫu nhiên.
@@ -21,6 +18,7 @@ function generateCode(): string {
 
 const app = express();
 app.use(express.json());
+mountProbes(app);
 
 // Số phiên bản nằm sẵn trong đường dẫn ngay từ v1, để #18 thêm được v2 chạy song
 // song mà không phải đổi đường dẫn cũ. Xem docs/adr/0002-he-thong-demo-va-stack.md.

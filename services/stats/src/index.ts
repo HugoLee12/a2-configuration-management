@@ -1,10 +1,8 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { Pool } from "pg";
+import express from "express";
+import { mountProbes, pool } from "../../shared/src/service.ts";
 
 const INTERVAL_MS = 1000;
-
-// Pool đọc PGHOST/PGUSER/PGPASSWORD/PGDATABASE thẳng từ biến môi trường.
-const pool = new Pool();
 
 // Rút toàn bộ hàng đợi rồi cộng dồn, gói trong đúng một câu lệnh nên hai việc
 // đó cùng thành công hoặc cùng huỷ: không có kẽ nào làm mất hay đếm đôi sự kiện.
@@ -33,3 +31,10 @@ async function run(): Promise<void> {
 }
 
 void run();
+
+// Worker vẫn nghe HTTP trên mạng nội bộ của Docker, chỉ để trả lời hai đường dẫn
+// thăm dò; nó không có mục `ports:` nên vẫn không ra tới ngoài. Không có máy chủ
+// này thì không có cách nào hỏi `stats` xem nó còn sống hay đã sẵn sàng.
+const app = express();
+mountProbes(app);
+app.listen(3000);
