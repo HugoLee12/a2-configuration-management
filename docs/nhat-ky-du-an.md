@@ -987,3 +987,125 @@ Nó gắn `/metrics` vào đúng máy chủ HTTP mà #7 vừa dựng lên cho c�
 
 Một chỗ cần để mắt khi làm #8: `services/shared/` hiện không phải một workspace npm và được import theo đường dẫn tương đối, vì Node không bóc kiểu cho file TypeScript nằm dưới `node_modules`.
 Cách này chạy đúng và đã qua cả `npm ci` trong Docker, nhưng nếu #8 làm phần dùng chung phình lên đáng kể thì đây là chỗ đầu tiên nên xem lại.
+
+## 2026-07-29 - Số liệu vận hành, và một lỗi mà hai mươi test xanh không thấy
+
+**Ticket**: #8 (B4), #60
+**Pull request**: #58, #59
+**Phục vụ**: thay đổi cỡ chuẩn thứ tư của Giai đoạn thủ công, tức mẫu số liệu thứ tư; và là dẫn chứng cho mục bàn về giới hạn của cổng gác tự động trong báo cáo
+
+Mục này gộp #60 vào cùng #8, theo đúng quy tắc mà chính #60 đi sửa trong `CONTEXT.md`.
+
+### Ticket đòi cái gì
+
+#8 đòi cả ba service phơi số liệu vận hành theo định dạng của Prometheus: số đếm request theo endpoint và mã trạng thái, phân bố độ trễ, và ít nhất hai số đếm nghiệp vụ.
+
+Lý do làm ngay bây giờ, dù Prometheus phải tới #15 mới có, đã nằm sẵn trong phần Consequences của `docs/adr/0004`: gắn công cụ quan sát vào sau thì gần như miễn phí, còn làm ngược lại thì phải sửa cả ba service.
+#7 đã trả trước một phần chi phí đó khi dựng máy chủ HTTP cho `stats`, nên #8 chỉ còn việc gắn thêm một đường dẫn vào chỗ đã có sẵn.
+
+### Đã thay đổi những gì
+
+Phần đo nằm ở `services/shared/src/metrics.ts`, cạnh module dùng chung mà #7 đã tạo: một registry, một middleware đếm request và đo độ trễ, và endpoint `/metrics`.
+nginx nới khối regex `/internal/` để chuyển tiếp thêm `metrics`, nên `stats` vẫn với tới được dù nó không có mục `ports:` nào.
+
+Ba quyết định đáng ghi.
+
+**Nhãn `endpoint` lấy từ mẫu route, không lấy từ đường dẫn thô.**
+Service `redirect` nhận `/:code`, nên nếu lấy `req.path` thì mỗi mã ngắn sinh một chuỗi thời gian riêng và Prometheus phình không giới hạn.
+Lấy `req.route.path` thì mọi lượt chuyển hướng gom về đúng một nhãn, và request không khớp route nào gom về `unknown`, nên đường dẫn rác cũng không sinh nhãn mới.
+
+**Counter nghiệp vụ khai báo ở từng service, không ở phần dùng chung.**
+Ba service dùng chung một image, nên khai báo chung sẽ khiến cả ba cùng phơi cả ba số ở giá trị 0, và Prometheus gộp cùng một tên chỉ số từ ba job thì đếm đôi.
+
+**Câu lệnh tổng hợp của worker được viết lại.**
+`stats_visits_aggregated_total` cần số lượt, còn `rowCount` của câu lệnh cũ là số mã.
+Phần ghi chuyển vào một CTE mà truy vấn ngoài không đọc tới; PostgreSQL vẫn chạy mọi câu lệnh sửa dữ liệu trong `WITH` đúng một lần và luôn tới cùng, nên tính nguyên tử đã lập luận ở #6 không đổi.
+
+### Chuyện đáng kể lại: hai mươi test xanh và một lỗi vẫn còn
+
+Bản đầu của nhánh đặt phần đo **sau** `express.json()` ở service `link`.
+
+Bộ kiểm thử xanh toàn bộ, 20 trên 20, kể cả tám test mới viết riêng cho `/metrics`.
+Lỗi vẫn còn nguyên ở đó.
+
+Body JSON hỏng hoặc quá cỡ bị chính body-parser từ chối bằng `next(err)`, mà `next(err)` nhảy thẳng tới error handler và bỏ qua mọi middleware đăng ký sau nó.
+Hệ quả là mọi mã 400 và 413 sinh ra ở tầng phân giải body biến mất khỏi `http_requests_total` lẫn histogram độ trễ, tức là mất đúng phần mà một số đếm phân theo mã trạng thái cần thấy nhất.
+
+Không test nào bắt được, và lý do đơn giản đến mức khó chịu: mọi test đang có đều gửi JSON hợp lệ.
+Test `tạo link thiếu url thì bị từ chối` cũng gửi JSON hợp lệ, chỉ là thiếu trường; nó đi qua body-parser trót lọt rồi mới bị handler từ chối, nên nó đi qua cả phần đo.
+
+Cái bắt được là một lượt review đối chiếu mã với đặc tả, chạy như một bước riêng sau khi bộ test đã xanh.
+Sau khi biết, viết test tái hiện chỉ mất vài dòng, và test đó đã được xác nhận là đỏ với thứ tự cũ trước khi sửa.
+
+### Vì sao việc này thuộc về đề tài
+
+Ba mục trước đã dựng ba vế cho Luận điểm: tính lặp lại được ở #5, tính kiểm chứng được ở #6, tính rẻ của phép thử ở #7.
+Cả ba đều nghiêng về phía tự động hoá.
+Mục này thêm vế thứ tư, và nó đi ngược chiều: **cổng gác tự động chỉ bắt được thứ đã có ai đó nghĩ ra cách kiểm.**
+
+Điều này quan trọng vì nó chặn một cách đọc sai rất dễ xảy ra trong báo cáo A2.
+Khi bảng số liệu cho thấy Giai đoạn pipeline thắng ở cả bốn chỉ số DORA, kết luận hấp dẫn là "tự động hoá thay được việc con người xem xét".
+Lỗi vừa rồi là một phản ví dụ nằm ngay trong dữ liệu của chính đồ án: bộ kiểm thử đã xanh, và sang Giai đoạn pipeline nó sẽ xanh hệt như vậy, nhanh hơn, ở mọi lần build, mà vẫn không thấy gì.
+
+Cái pipeline mua được không phải là khả năng phát hiện.
+Nó là việc chạy lại thứ đã biết cách kiểm, với chi phí gần bằng không, mãi mãi.
+Việc nghĩ ra cái cần kiểm vẫn nằm ngoài, và đó là chỗ Chương 25 đặt review cạnh change management chứ không coi cái này thay cái kia.
+
+Có một hệ quả nhỏ đi kèm, đáng ghi vì nó lộ ra một ràng buộc ngầm: mục "Bảng lệnh" trong `docs/trien-khai-thu-cong.md` ghi rõ bước 4 và bước 6 phải thấy `pass 12`, nên việc thêm tám test làm con số đó sai.
+Nó được sửa ngay trong cùng pull request, vì nó là thứ chính thay đổi này làm hỏng.
+Ở Giai đoạn pipeline, ràng buộc kiểu này biến mất cùng với người đọc con số.
+
+### Đã kiểm chứng thế nào
+
+Vẫn theo nếp từ #5, #6 và #7: việc kiểm chứng khi phát triển không được đụng vào chính môi trường sẽ được đo.
+
+Bộ kiểm thử chạy trên stack thứ ba dựng riêng, project `a2-dev`, cổng 8099, file env nằm ngoài kho mã.
+Xong việc thì `down -v` và xoá luôn image, xác nhận bằng việc liệt kê lại container và volume chứ không bằng việc lệnh chạy xong không báo lỗi.
+
+Tám test mới bám sát bốn tiêu chí nghiệm thu kỹ thuật, cộng thêm hai test giữ chỗ cho hai quyết định thiết kế ở trên: một test liệt kê mọi nhãn `endpoint` mà `redirect` sinh ra và đòi chúng nằm trong một danh sách đóng, một test đòi mỗi service chỉ phơi số đếm nghiệp vụ của chính nó.
+Hai test đó không kiểm một hành vi người dùng thấy được; chúng kiểm rằng hai cái bẫy đã nhận diện không quay lại.
+
+Tiêu chí triển khai tay thuộc về bước triển khai, như mọi mẫu trước.
+
+### Số liệu
+
+| Mẫu | staging | prod | Sự cố |
+|---|---|---|---|
+| #5 | 2 phút | 5 phút | phát hành thất bại |
+| #6 | 2 phút | 15 phút | phát hành thất bại |
+| #7 | 2 phút | 1 phút | không |
+| #8 | 2 phút | 0 phút | không |
+
+Hai mẫu liên tiếp không có lần phát hành thất bại nào.
+Change failure rate của Giai đoạn thủ công đi từ 2/3 xuống 2/4.
+
+Con số 0 phút của prod không phải một phép đo bằng không.
+Nó là sàn phân giải của đồng hồ: Nhật ký thủ công ghi mốc theo phút, nên mọi khoảng ngắn hơn một phút đều rơi về 0.
+Bước 5 lần này không build lại lớp nào vì `COPY services/ services/` báo `CACHED`, do bước 3 vừa build đúng nội dung đó cho staging; phần còn lại chỉ là xuất image và dựng lại container.
+Ghi chú đầy đủ nằm ở mục "#8 prod" trong `docs/nhat-ky-thu-cong.md`.
+
+Cột staging đứng yên ở 2 phút suốt bốn mẫu.
+Đó là con số ổn định nhất có được cho tới giờ, và nó sẽ là mốc so sánh chính ở #22 chứ không phải cột prod, vì cột prod bị cache build của Docker làm nhiễu theo chiều luôn có lợi cho Giai đoạn thủ công.
+
+### Dẫn chứng
+
+- Bốn chốt thiết kế ghi trước khi viết mã: comment trên issue #8
+- Thay đổi mã, tám test mới, và commit sửa lỗi thứ tự middleware: pull request #58, commit `eda7968`
+- Test tái hiện lỗi thứ tự middleware: `tests/metrics.test.ts`, test `request bị từ chối trước khi vào route vẫn được đếm`
+- Số đo và ghi chú về sàn phân giải: pull request #59, `docs/nhat-ky-thu-cong.md`, mục "Ghi chú khác"
+
+### Đang ở đâu sau mục này
+
+Nhật ký thủ công có tám dòng trên bốn mẫu, và hai lần phát hành thất bại, cả hai vẫn thuộc về hai mẫu đầu.
+Hình dạng đã rõ hơn: hai lần hỏng đầu đều do một bước trong quy trình tay bị bỏ sót, còn hai lần gần nhất, khi quy trình được chép nguyên khối và các dòng điều kiện được mở đúng, đều sạch.
+Điều này có nghĩa là cái tự động hoá sắp thay thế không phải một quy trình hay hỏng, mà là một quy trình chỉ đúng khi người thao tác không mệt.
+
+Giai đoạn thủ công còn #9 (B5, log có cấu trúc) và #10 (B6, đóng giai đoạn và tổng hợp số liệu mốc).
+
+**#9 là ticket kế tiếp, và nó đã hết blocker.**
+Nó sẽ đụng lại đúng chỗ #8 vừa mở rộng, vì log có cấu trúc và số đếm request cùng đọc một thứ: mỗi request đi qua thì ai gọi, mất bao lâu, trả về mã gì.
+Nên cân nhắc trước một chuyện: `services/shared/` sau #8 đã có hai file và sẽ có ba, mà nó vẫn không phải một workspace npm và vẫn được import theo đường dẫn tương đối.
+Cách này chạy đúng và đã qua cả `npm ci` trong Docker qua hai mẫu triển khai, nhưng #9 là lúc hợp lý để quyết định giữ hay đổi, chứ không phải để nó lớn thêm rồi mới xét.
+
+Sau #10 là hết Giai đoạn thủ công.
+Từ #11 trở đi pipeline mới được dựng, và mọi con số của bốn mẫu hiện có sẽ trở thành mốc so sánh cố định, không sửa lại được nữa.
