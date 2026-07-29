@@ -15,7 +15,7 @@ Cái không được phép là để một ticket đóng mà không mục nào n
 
 Đồ án có hai loại nhật ký, đừng lẫn.
 
-**Nhật ký thủ công** (#4, chưa lập) là dữ liệu số: mỗi lần build và triển khai tay ghi thời điểm bắt đầu, thời điểm xong, các bước phải làm.
+**Nhật ký thủ công** là dữ liệu số: mỗi lần build và triển khai tay ghi thời điểm bắt đầu, thời điểm xong, các bước phải làm.
 Nó là dữ liệu nghiên cứu để tính lead time của Giai đoạn thủ công, phải ghi ngay lúc làm vì không dựng lại được sau.
 
 **Nhật ký dự án** là file này, ghi chú tường thuật để viết báo cáo.
@@ -846,3 +846,144 @@ Ngược lại, tách `waitForStack` ra riêng thì nó phải chờ #7 xong m�
 
 Thứ tự đề nghị cho phiên sau là **#50 trước, rồi #7**.
 #50 mỏng và chỉ chạm `tests/`, làm xong thì lần triển khai kế tiếp đã có dấu vết môi trường trong đầu ra, thay vì lại phải suy đoán như lần này.
+
+## 2026-07-29 - Sức khoẻ, sẵn sàng, và một thiết kế đã chốt vẫn hỏng
+
+**Ticket**: #7 (B3), #50, #56
+**Pull request**: #53, #54, #55
+**Phục vụ**: thay đổi cỡ chuẩn thứ ba của Giai đoạn thủ công, tức mẫu số liệu thứ ba; và là dẫn chứng cho mục bàn về giới hạn của thiết kế trên giấy trong báo cáo
+
+Mục này gộp #50 vào cùng #7.
+#50 là một thay đổi quy trình mỏng, chỉ thêm một dòng in ra địa chỉ mà bộ kiểm thử đang bắn vào, nên viết riêng một mục cho nó sẽ dài hơn chính thay đổi.
+Theo `CLAUDE.md`, ticket quy trình mỏng thì gộp vào mục của ticket kế tiếp.
+
+### Hai ticket đòi cái gì
+
+#50 sinh ra từ chính lần triển khai của #6.
+Bước 4 và bước 6 của quy trình tay là cùng một lệnh `npm test`, chỉ khác nhau ở biến `BASE_URL`, nên hai lần chạy để lại đầu ra giống hệt nhau.
+Không có cách nào biết lần nào bắn vào đâu, và đó đúng là thứ đã che giấu sự cố của #5 suốt 65 phút.
+Thay đổi là một dòng `console.log` lúc nạp module, đặt ở đó để nó có mặt cả khi bộ kiểm thử đỏ.
+
+#7 đòi mỗi service cho biết hai chuyện khác nhau: tiến trình còn sống, và nó đã phục vụ được chưa.
+Endpoint sẵn sàng phải phản ánh kết nối cơ sở dữ liệu, vì #13 sẽ dựa vào đúng tín hiệu này để quyết định chuyển lưu lượng hay huỷ bản mới.
+Kèm theo là việc `waitForStack` chuyển sang chờ tín hiệu sẵn sàng thay vì chờ mã 400.
+
+### Đã thay đổi những gì
+
+Cả ba service phơi `/healthz` và `/readyz` qua một module dùng chung ở `services/shared/src/service.ts`, nginx chuyển tiếp chúng dưới `/internal/<service>/`.
+
+`stats` vì vậy có máy chủ HTTP, thứ nó chưa từng có.
+Đây không phải một quyết định kiến trúc mới nên không cần ADR: phần Consequences của `docs/adr/0004` đã viết rằng service phải phơi `/metrics` chuẩn Prometheus ngay từ đầu, mà "service" ở đó là cả ba, và `stats` không thể phơi `/metrics` nếu không nghe HTTP.
+#7 chỉ làm việc đó đến sớm hơn #8 một ticket.
+Hình dạng "chỉ có một cửa vào là nginx" không đổi, vì không service nào có mục `ports:`.
+
+`waitForStack` giờ chờ `/readyz` của cả ba service.
+Cổng gác cũ chờ service `link` đáp 400 cho một request thiếu `url`, mà nhánh 400 đó không chạm cơ sở dữ liệu, nên nó báo sẵn sàng trong lúc Postgres còn đang khởi động và test chạy ngay sau đó đỏ với mã 500.
+
+### Chuyện đáng kể lại: thiết kế đã chốt vẫn hỏng
+
+Thiết kế của #7 được chốt trọn vẹn trước khi viết dòng mã nào, ghi thành một comment trên ticket.
+Nó đã lường trước cái bẫy khó nhất và viết hẳn ra:
+
+> pg mặc định chờ vô hạn để lấy kết nối, nên khi Postgres bị `pause` thay vì `stop` thì `/readyz` sẽ treo chứ không trả 503. Với `stop` thì `ECONNREFUSED` về ngay, nên nếu chỉ thử `stop` sẽ tưởng là đã xong trong khi chưa.
+
+Kết luận rút ra là đặt `connectionTimeoutMillis: 2000`.
+Cài đúng như vậy, rồi đo, thì ra thế này:
+
+| Kịch bản | link | redirect | stats |
+|---|---|---|---|
+| `stop postgres` | 503 sau 2.1s | 503 sau 2.1s | 503 sau 2.1s |
+| `pause postgres` | **treo quá 30s** | 503 sau 2.1s | 503 sau 2.1s |
+
+Thiết kế đúng ở chỗ nhận ra `pause` mới là kịch bản khó, và sai ở chỗ chẩn đoán nguyên nhân.
+`connectionTimeoutMillis` chỉ chặn lúc pool phải **mở kết nối mới**.
+Khi pool đang giữ sẵn một kết nối rỗi, câu lệnh được gửi đi trên socket cũ rồi chờ vô hạn một câu trả lời không bao giờ tới, và không có gì cắt nó.
+Ba service khác nhau đúng ở chỗ đó: pool của `link` còn kết nối rỗi từ request nghiệp vụ ngay trước, hai service kia thì không.
+
+Cách sửa là một pool riêng cho thăm dò, `max: 1`, có cả `connectionTimeoutMillis` lẫn `query_timeout`.
+Hạn giờ cố ý không đặt lên pool nghiệp vụ, vì `query_timeout` sẽ chặt mọi câu lệnh ở 2 giây, trong đó có chu kỳ tổng hợp của `stats` quét cả bảng `visits`.
+Với #21, nơi worker bị dừng có chủ đích rồi cho sống lại, chu kỳ đầu tiên phải xử lý cả đống tồn đọng; nếu nó bị chặt ở 2 giây thì lần nào cũng hết giờ và worker không bao giờ đuổi kịp.
+Một cơ chế phục hồi tự khoá chính nó là thứ tệ hơn hẳn cái nó đổi lấy.
+
+Cái giá của việc tách đã ghi thành chốt thứ tư trên #7, chứ không giấu: `/readyz` giờ báo sẵn sàng dựa trên một pool mà không request nghiệp vụ nào đi qua, nên pool nghiệp vụ cạn hoặc kẹt trong lúc Postgres vẫn khoẻ là kiểu hỏng mà tín hiệu này không bắt được.
+
+### Vì sao việc này thuộc về đề tài
+
+Đây không phải chuyện một thư viện có hành vi lạ.
+Nó là dẫn chứng cho một luận điểm mà Chương 25 nói ở mức nguyên tắc: thiết kế trên giấy, dù kỹ tới đâu, cũng chỉ là giả thuyết cho tới khi có cái gì đó chạy thử nó.
+
+Thiết kế này đã kỹ hơn mức thường thấy.
+Nó nêu đúng kịch bản khó, nêu đúng lý do vì sao kịch bản dễ không đủ, và vẫn chốt sai một nửa nguyên nhân.
+Cái bắt được sai không phải một lần đọc lại kỹ hơn, mà là hai câu lệnh `docker compose pause` rồi `curl`.
+
+Từ đó ra một vế thứ ba cho Luận điểm, tiếp nối hai vế đã có:
+
+- Mục của #5 nói tự động hoá thắng ở **tính lặp lại được**.
+- Mục của #6 thêm **tính kiểm chứng được**: bản ghi thủ công do người thao tác tự khai, không có gì đối chiếu lời khai với thực tế.
+- Mục này thêm **tính rẻ của phép thử**. Ở Giai đoạn thủ công, kiểm một tiêu chí như "ngắt cơ sở dữ liệu thì `/readyz` đổi trạng thái trong vài giây" tốn một bước tay, và tốn đủ để nó thành một dòng ghi chú riêng trong Nhật ký thủ công vì nó làm hỏng khả năng so sánh của mẫu đo. Sang Giai đoạn pipeline, cùng phép thử ấy chạy mỗi lần build mà không ai phải trả thêm gì. Chi phí của việc kiểm chứng chính là thứ quyết định người ta có kiểm chứng hay không.
+
+### Mẫu đo thứ ba lớn hơn hai mẫu trước
+
+Phải ghi rõ chỗ này, nếu không bảng lead time sẽ bị đọc sai.
+
+#5 sửa một file service. #6 sửa một file service. #7 chạm ba service, `infra/nginx/nginx.conf`, `tests/`, và bốn file tài liệu.
+
+Lối đi kia là tách phần `waitForStack` ra thành ticket riêng, nhưng chính #7 đã lập luận vì sao không nên: endpoint sẵn sàng mà #7 dựng lên chính là tín hiệu đúng mà cổng gác đang thiếu, nên tách ra thì ticket kia phải chờ #7 xong, và lúc đó chỉ còn vài dòng đổi địa chỉ, tức không đủ một việc có nghĩa.
+Giữ nguyên và ghi rõ mẫu này lớn hơn thì lead time của nó vẫn dùng được, miễn là khi đọc bảng biết nó lớn hơn.
+
+### Đã kiểm chứng thế nào
+
+Vẫn theo bài học từ #5 và #6: việc kiểm chứng khi phát triển không được đụng vào chính môi trường sẽ được đo.
+
+Bộ kiểm thử chạy trên stack thứ ba dựng riêng, project `a2-dev`, cổng 8099, file env nằm ngoài kho mã.
+Xong việc thì `down -v` và xoá luôn image, xác nhận bằng mốc tạo của volume chứ không bằng việc lệnh chạy xong không báo lỗi.
+Nhờ vậy `a2-staging` lẫn `a2-prod` không bị đụng tới trước lúc bấm giờ.
+
+Chính stack dev này là nơi phát hiện `connectionTimeoutMillis` chưa đủ.
+Nếu chỗ đó chỉ lộ ra lúc triển khai lên staging thì nó đã thành một lần phát hành thất bại, chứ không phải một lần sửa trước khi merge.
+
+Hai tiêu chí nghiệm thu không có test tự động, và cả hai đều có lý do chứ không phải bỏ sót.
+Tiêu chí "ngắt cơ sở dữ liệu" cần dừng Postgres, mà bộ kiểm thử chỉ được gửi HTTP theo tiêu chí nghiệm thu của #3; thêm nữa #13 sẽ dùng lại chính bộ test này làm smoke test cho blue-green, nơi một test tự dừng container là thứ không được phép tồn tại.
+Tiêu chí triển khai tay thì thuộc về bước triển khai.
+
+### Số liệu
+
+| Mẫu | staging | prod | Sự cố |
+|---|---|---|---|
+| #5 | 2 phút | 5 phút | phát hành thất bại |
+| #6 | 2 phút | 15 phút | phát hành thất bại |
+| #7 | 2 phút | 1 phút | không |
+
+Đây là **mẫu đầu tiên không có lần phát hành thất bại nào**.
+Change failure rate của Giai đoạn thủ công đi từ 2/2 xuống 2/3.
+
+Ba chỗ phải đọc kèm, không được lấy con số trần:
+
+- **2 phút của staging đã gồm bước kiểm chứng tay dùng một lần.** Phần triển khai đúng nghĩa nhỏ hơn. Ghi chú nằm ở mục "Ghi chú khác" trong `docs/nhat-ky-thu-cong.md`.
+- **1 phút của prod nhỏ hơn staging vì cache build của Docker đã nóng.** Lần build thứ hai chỉ chép lại `services/` chứ không chạy lại `npm ci`. Điều này đúng cho mọi mẫu, nhưng ở #7 nó lộ rõ vì không có sự cố nào che mất.
+- **Mẫu này lớn hơn #5 và #6 về phạm vi thay đổi**, xem mục trên.
+
+Con số 1 phút của prod là con số sạch nhất có được cho tới giờ về chi phí triển khai tay thuần tuý, khi không có sự cố và không có bước phụ.
+Nó cũng là con số sẽ khó bị đánh bại ở Giai đoạn pipeline nếu chỉ nhìn thời gian tường: giá trị của pipeline không nằm ở chỗ nhanh hơn một phút, mà nằm ở ba vế đã nêu ở trên.
+
+### Dẫn chứng
+
+- Dòng in địa chỉ của #50: pull request #53
+- Thay đổi mã và hai test mới của #7: pull request #54, commit `5a60048`
+- Thiết kế chốt trước khi viết mã, và chốt thứ tư ghi sau khi đo: hai comment trên issue #7
+- Số đo và ghi chú về bước phụ: pull request #55, `docs/nhat-ky-thu-cong.md`, mục "Ghi chú khác"
+- Bằng chứng `/readyz` đổi trạng thái: bảng trong mục "#7 staging" của `docs/nhat-ky-thu-cong.md`
+
+### Đang ở đâu sau mục này
+
+Nhật ký thủ công có sáu dòng trên ba mẫu, và hai lần phát hành thất bại, cả hai đều thuộc về hai mẫu đầu.
+Ba mẫu vẫn là ít, nhưng hình dạng đã bắt đầu đọc được: hai lần hỏng đầu đều do một bước trong quy trình tay bị bỏ sót, còn lần không hỏng là lần quy trình được chép nguyên khối và các dòng điều kiện được mở đúng.
+
+Giai đoạn thủ công còn #8 (B4, endpoint metrics), #9 (B5, log có cấu trúc) và #10 (B6, đóng giai đoạn và tổng hợp số liệu mốc).
+
+**#8 là ticket kế tiếp, và nó đã hết blocker.**
+Nó gắn `/metrics` vào đúng máy chủ HTTP mà #7 vừa dựng lên cho cả ba service, nên phần dùng chung ở `services/shared/src/service.ts` sẽ lớn thêm chứ không phải viết lại.
+Đây cũng là lý do #7 chọn viết module dùng chung thay vì chép ba lần.
+
+Một chỗ cần để mắt khi làm #8: `services/shared/` hiện không phải một workspace npm và được import theo đường dẫn tương đối, vì Node không bóc kiểu cho file TypeScript nằm dưới `node_modules`.
+Cách này chạy đúng và đã qua cả `npm ci` trong Docker, nhưng nếu #8 làm phần dùng chung phình lên đáng kể thì đây là chỗ đầu tiên nên xem lại.
