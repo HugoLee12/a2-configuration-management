@@ -1,10 +1,10 @@
 import express from "express";
-import { Pool } from "pg";
-
-// Pool đọc PGHOST/PGUSER/PGPASSWORD/PGDATABASE thẳng từ biến môi trường.
-const pool = new Pool();
+import { mountProbes, pool } from "../../shared/src/service.ts";
 
 const app = express();
+
+// Trước `/:code`, nếu không thì hai đường dẫn thăm dò rơi vào route bắt tất cả.
+mountProbes(app);
 
 app.get("/:code", async (req, res) => {
   const { rows } = await pool.query<{ url: string }>("select url from links where code = $1", [
