@@ -45,6 +45,31 @@ Nhãn `endpoint` là mẫu route chứ không phải đường dẫn thô, nên 
 
 Nhánh `/internal/` là lối duy nhất hỏi được `stats`, vì worker không nằm trên đường phục vụ request nào.
 
+## Log
+
+Cả ba service ghi log ra stdout và stderr, mỗi bản ghi là đúng một dòng JSON.
+
+```json
+{"time":"2026-07-29T04:12:07.481Z","level":"info","service":"link","msg":"request","method":"POST","path":"/api/v1/links","status":201,"duration_ms":8.4}
+```
+
+Mỗi request phục vụ xong để lại một bản ghi `msg: "request"`, và mỗi lỗi để lại một bản ghi `level: "error"` mang theo stack.
+Chu kỳ tổng hợp của worker `stats` chỉ để lại bản ghi khi thất bại, vì nó lặp mỗi giây.
+
+Trường `path` là đường dẫn thô, nên với service `redirect` nó chính là mã ngắn.
+Địa chỉ đích mà mã ngắn trỏ tới không xuất hiện trong bản ghi nào.
+
+Vì mỗi dòng là JSON nên trích số liệu được bằng một lệnh, chẳng hạn đếm request theo mã trạng thái:
+
+```powershell
+docker compose --env-file env/staging.env logs --no-log-prefix link |
+  ForEach-Object { $_ | ConvertFrom-Json } | Where-Object msg -eq request |
+  Group-Object status | Select-Object Name, Count
+```
+
+Đổi `Group-Object status` thành `Measure-Object duration_ms -Average -Maximum` thì ra độ trễ thay vì số lượt.
+Đây là nguồn dữ liệu thứ hai bên cạnh `/metrics`: `/metrics` cho số đã cộng dồn sẵn, còn log giữ từng sự kiện nên trả lời được câu hỏi chưa nghĩ ra lúc dựng chỉ số.
+
 ## Chạy hệ
 
 Cần Docker Compose.

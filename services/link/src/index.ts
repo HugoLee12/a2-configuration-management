@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import express from "express";
 import { Counter } from "prom-client";
+import { mountErrorLogging, mountLogging } from "../../shared/src/log.ts";
 import { mountMetrics, registry } from "../../shared/src/metrics.ts";
 import { mountProbes, pool } from "../../shared/src/service.ts";
 
@@ -29,11 +30,14 @@ const linksCreated = new Counter({
 
 const app = express();
 
-// Trước `express.json()`, không chỉ trước các route. Body hỏng hoặc quá cỡ bị
-// chính body-parser từ chối bằng `next(err)`, mà `next(err)` nhảy thẳng tới
-// error handler và bỏ qua mọi middleware đăng ký sau nó. Đặt sau thì đúng những
-// mã 400 và 413 đó biến mất khỏi số đếm, tức là mất đúng phần mà một số đếm
-// phân theo mã trạng thái cần thấy nhất.
+// Cả hai đều phải đứng trước `express.json()`, không chỉ trước các route. Body
+// hỏng hoặc quá cỡ bị chính body-parser từ chối bằng `next(err)`, mà `next(err)`
+// nhảy thẳng tới error handler và bỏ qua mọi middleware đăng ký sau nó. Đặt sau
+// thì đúng những mã 400 và 413 đó biến mất khỏi số đếm lẫn khỏi log, tức là mất
+// đúng phần mà một số đếm phân theo mã trạng thái cần thấy nhất.
+//
+// Log đứng trước metrics vì `mountMetrics` đăng ký cả route `/metrics`.
+mountLogging(app);
 mountMetrics(app);
 app.use(express.json());
 mountProbes(app);
@@ -96,5 +100,8 @@ app.get("/api/v1/links/:code/stats", async (req, res) => {
   // pg trả bigint về dạng chuỗi để không mất chính xác ở số lớn hơn 2^53.
   res.json({ code: req.params.code, visits: Number(stats.visit_count) });
 });
+
+// Sau mọi route, xem chú thích ở mountErrorLogging.
+mountErrorLogging(app);
 
 app.listen(3000);

@@ -32,17 +32,23 @@ services:
       timeout: 3s
       retries: 20
 
+  # SERVICE_NAME đi vào từng bản ghi log. Ba service dùng chung một image nên tên
+  # không suy ra được từ mã, và prefix của `docker compose logs` biến mất ngay khi
+  # log được gom về một chỗ.
   link:
     <<: *service
     command: ["node", "services/link/src/index.ts"]
     environment:
       <<: *postgres-env
+      SERVICE_NAME: link
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
 
   redirect:
     <<: *service
     command: ["node", "services/redirect/src/index.ts"]
-    environment: *postgres-env
+    environment:
+      <<: *postgres-env
+      SERVICE_NAME: redirect
 
   # Worker chạy nền: nó chỉ đọc bảng visits rồi cộng dồn vào link_stats theo chu kỳ.
   # Nó không nằm trên đường phục vụ request nào, nhưng vẫn nghe HTTP nội bộ để trả
@@ -50,7 +56,9 @@ services:
   stats:
     <<: *service
     command: ["node", "services/stats/src/index.ts"]
-    environment: *postgres-env
+    environment:
+      <<: *postgres-env
+      SERVICE_NAME: stats
 
   nginx:
     image: nginx:1.29-alpine

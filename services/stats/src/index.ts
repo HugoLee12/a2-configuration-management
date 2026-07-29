@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import express from "express";
 import { Counter } from "prom-client";
+import { logError, mountErrorLogging, mountLogging } from "../../shared/src/log.ts";
 import { mountMetrics, registry } from "../../shared/src/metrics.ts";
 import { mountProbes, pool } from "../../shared/src/service.ts";
 
@@ -57,7 +58,7 @@ async function run(): Promise<void> {
       // Hỏng một chu kỳ không được làm chết worker: sự kiện vẫn nằm nguyên
       // trong bảng visits nên chu kỳ sau tổng hợp lại được.
       cycles.inc({ result: "failure" });
-      console.error(error);
+      logError("chu kỳ tổng hợp thất bại", error);
     }
     await sleep(INTERVAL_MS);
   }
@@ -69,7 +70,13 @@ void run();
 // nội bộ; nó không có mục `ports:` nên vẫn không ra tới ngoài. Không có máy chủ
 // này thì không có cách nào hỏi `stats` xem nó còn sống, đã sẵn sàng, hay chu kỳ
 // tổng hợp của nó có đang chạy hay không.
+//
+// Chu kỳ chạy trót lọt cố ý không để lại bản ghi nào: nó lặp mỗi giây, nên ghi
+// lại sẽ nhấn chìm mọi thứ khác. Số chu kỳ đã chạy là việc của `/metrics`, còn
+// log chỉ giữ phần bất thường.
 const app = express();
+mountLogging(app);
 mountMetrics(app);
 mountProbes(app);
+mountErrorLogging(app);
 app.listen(3000);
