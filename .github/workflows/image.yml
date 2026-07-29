@@ -26,7 +26,7 @@ jobs:
     outputs:
       image: ${{ steps.day.outputs.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Đăng nhập GHCR
         env:
