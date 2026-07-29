@@ -1582,3 +1582,210 @@ Nó nên được làm trước #12, vì #12 sẽ sinh thêm mẫu đo và mọi
 Còn **#70**, một ticket mở sau pull request #68: `CONTRIBUTING.md` và `docs/trien-khai-thu-cong.md` đều bị lệch khi ranh giới giai đoạn dịch chuyển, và cả hai đều mô tả đường đi của một thay đổi nên để lệch thì #22 dựng lại sai.
 
 Một yêu cầu từ mục trước vẫn còn nguyên và chưa ticket nào nhận: Giai đoạn pipeline cần ít nhất một thay đổi đụng `infra/postgres/init.sql`, nếu không thì change failure rate của hai giai đoạn không so được với nhau.
+
+---
+
+## 2026-07-29 - Không còn ai bấm giờ, và hai tài liệu vẫn bảo bấm
+
+**Ticket**: #67 (C0) và #70
+**Pull request**: #72 và #73
+**Phục vụ**: điều kiện tiên quyết của #22, tức ô Demo & đo lường của rubric và phần đo lường của báo cáo; #70 phục vụ thêm mục 25.3 Change management
+
+### Vì sao hai ticket đi chung một mục
+
+Hai ticket này là hai nửa của cùng một sự kiện, nên tách ra hai mục thì phải kể lại cùng một bối cảnh hai lần.
+
+Sự kiện là ranh giới giai đoạn dịch chuyển ở #10 và #11.
+Từ đó không còn ai gõ lệnh build nên cũng không còn ai bấm giờ, mà đồng hồ thì vẫn phải chạy tiếp bằng cách khác.
+#67 chốt cách đọc đồng hồ mới.
+#70 gỡ chỗ tài liệu vẫn còn bảo người ta bấm cái đồng hồ cũ.
+
+#70 lại là ticket quy trình mỏng, chỉ sửa hai file tài liệu, nên luật ở đầu file này cho phép gộp nó vào mục của ticket kế tiếp thay vì viết riêng.
+
+### Ticket đòi cái gì
+
+#67 đòi chốt bằng văn bản xem mốc thời gian của Giai đoạn pipeline lấy từ trường nào của GitHub Actions, mốc nào của giai đoạn này ứng với cột nào của `docs/nhat-ky-thu-cong.md`, và chỗ nào không ứng được thì phải ghi rõ chênh lệch.
+Nó chỉ chốt định nghĩa và kiểm chứng rằng trích được thật; việc tính bốn chỉ số DORA thuộc về #22.
+
+#70 đòi sửa hai tài liệu mô tả đường đi của một thay đổi, cả hai đều lệch sau khi ranh giới dịch chuyển.
+`CONTRIBUTING.md` mô tả việc bảo vệ `main` như thể chỉ có một cổng gác.
+`docs/trien-khai-thu-cong.md` thì nửa còn hiệu lực nửa đã chết, và cái nửa đã chết đang chỉ người đọc ghi vào một file cấm ghi.
+
+### Đã thay đổi những gì
+
+Bốn file, trong đó một file mới, và không đụng một dòng mã nào của Hệ thống demo.
+
+`docs/nhat-ky-pipeline.md` là file mới, giữ đúng vai trò mà `docs/nhat-ky-thu-cong.md` giữ cho giai đoạn trước: nó là chỗ giữ mốc giờ thô, và nó cố ý không có cột nào chứa số đã tính sẵn.
+Khác một điểm, và khác vì hoàn cảnh chứ không vì lựa chọn.
+Giai đoạn thủ công có một người bấm giờ nên mốc chỉ tồn tại nếu người đó ghi lại; Giai đoạn pipeline thì máy ghi hộ, nên phần khó không phải là ghi mà là chọn đúng trường trong số nhiều trường gần giống nhau, rồi chép nó vào kho mã trước khi GitHub xoá đi.
+
+`CONTEXT.md` nhận thêm một mục từ vựng cho file mới.
+
+`CONTRIBUTING.md` và `docs/trien-khai-thu-cong.md` là phần của #70.
+
+### Bài học của #10, lần này áp dụng trước chứ không phải sau
+
+Đây là điểm đáng kể nhất của #67, và nó không nằm trong bất kỳ dòng nào của tài liệu mới.
+
+Mục của #8 tính cột prod theo hai cách khác nhau mà không ai nhận ra, vì định nghĩa chưa bao giờ được viết ra.
+Tới lúc #10 phát hiện thì cùng một mẫu cho ra 3 phút hay 1 phút tuỳ cách đọc.
+Lần đó cứu được là nhờ `docs/nhat-ky-thu-cong.md` chỉ giữ mốc thô, nên cả năm mẫu dựng lại được theo định nghĩa mới.
+
+Giai đoạn pipeline không có sẵn chỗ dựa đó, vì dữ liệu nằm ở phía GitHub và có hạn sử dụng.
+Log của job bị xoá theo chính sách lưu giữ, mặc định 90 ngày với kho công khai, và con số đó là trần chứ không phải cam kết.
+Nếu để tới #22 mới chọn trường thì log đã mất, còn câu hỏi lần chạy nào ứng với thay đổi nào thì phải suy lại từ lịch sử chứ không đọc thẳng ra được.
+
+Nên #67 được làm khi Giai đoạn pipeline mới có đúng hai workflow run.
+Định nghĩa có mặt trước mẫu đo, không phải sau.
+Đây là chỗ báo cáo nói được về configuration management như một kỷ luật chứ không phải một bộ công cụ: cùng một bài học, lần đầu phải trả giá, lần sau trả trước.
+
+### Ba trường trông đều hợp lý, và vì sao hai trường kia bị loại
+
+GitHub Actions phơi ra nhiều trường thời gian gần giống nhau, và chọn nhầm trường nào cũng cho ra một con số trông hợp lý.
+Ba lựa chọn dưới đây đều có một trường đối thủ, nên chúng được chốt kèm lý do chứ không kèm lời khẳng định.
+
+**`created_at` chứ không `run_started_at`.**
+Trên lần chạy đầu tiên hai trường này bằng nhau, và cả hai mẫu hiện có đều xác nhận.
+Chúng chỉ tách nhau khi một run bị chạy lại: lúc đó `run_started_at` nhảy tới thời điểm của lần thử mới, còn `created_at` đứng yên ở thời điểm GitHub nhận cú push.
+Chọn `run_started_at` sẽ làm mọi lần thử hỏng biến mất khỏi số đo, mà lần thử hỏng thì thuộc về lead time theo đúng quy tắc không dừng đồng hồ ở giữa của Giai đoạn thủ công.
+
+**`max(jobs[].completed_at)` chứ không `updated_at` của run.**
+`updated_at` là lần sửa cuối của bản ghi run, không phải lúc run xong, và bất cứ thứ gì đụng vào run về sau cũng đẩy nó đi tiếp.
+Chênh lệch quan sát được trên cả hai mẫu là đúng 1 giây, tức không đổi kết luận nào.
+Thứ đổi kết luận là `updated_at` không có định nghĩa gắn với công việc, nên nó không trả lời được câu "thay đổi này xong lúc mấy giờ", còn `completed_at` của job thì trả lời được.
+
+**Run trên `main` chứ không run của pull request.**
+Mỗi thay đổi để lại hai lần chạy, và đây chính là món nợ mà pull request #68 để lại cho #67.
+Lần chạy trên pull request xảy ra trước mốc `Merge`, nên tính nó vào lead time sẽ cho ra một khoảng âm hoặc một khoảng chứa công việc làm trước khi thay đổi vào trunk.
+Nặng hơn: commit của pull request không phải commit sẽ được triển khai, vì squash sinh ra một commit mới trên `main` và tag của image đi theo commit đó.
+
+Cả ba đều cùng một họ với hai việc mà #10 phải gỡ.
+Không cái nào làm hệ thống hỏng, không cái nào làm test đỏ, và cả ba đều cho ra một con số đọc được mà không có gì báo động.
+
+### Năm chỗ hai giai đoạn không khớp nhau
+
+Ràng buộc của #67 nói rõ: một mốc không ứng được thì ghi lại chênh lệch, đừng chọn đại một trường cho khớp.
+Năm chênh lệch dưới đây phải mang theo mỗi khi so hai giai đoạn, và không cái nào khử được.
+
+**Độ phân giải lệch nhau 60 lần.**
+Giai đoạn thủ công ghi tới phút, Actions trả về tới giây.
+Mọi khoảng ngắn hơn một phút của giai đoạn trước đều rơi về 0, và mẫu #8 với cột prod bằng 0 phút là một trường hợp như vậy.
+
+**Cột `Chờ` đo hai hiện tượng khác nhau.**
+Ở Giai đoạn thủ công, `Bắt đầu` trừ `Merge` là khoảng thay đổi nằm chờ một người rảnh tay, dài từ 1 tới 9 phút.
+Ở Giai đoạn pipeline, cùng phép trừ ấy cho ra 8 giây và 4 giây, và nó đo độ trễ điều phối của GitHub.
+Hai con số vẫn so được, nhưng câu kết luận phải nói rằng thứ biến mất là việc phải chờ người, chứ không phải rằng máy chờ nhanh hơn người 60 lần.
+
+**`Bắt đầu` của pipeline chứa một khoảng mà giai đoạn trước không có.**
+Từ lúc run được tạo tới lúc một runner nhận job còn 10 giây nữa trên mẫu `748e69e`.
+Người thao tác tay thì không có quãng này, vì `Bắt đầu` của họ là lúc gõ ký tự đầu tiên.
+
+**`Hoàn tất build` không có nghĩa là image đã được kiểm.**
+Giai đoạn thủ công build rồi mới kiểm, nên `Hoàn tất` của nó là "image này đã qua kiểm thử".
+Pipeline chạy `kiem-tra` trước, trong đó `compose --build` dựng một image để có stack mà kiểm, rồi `dong-goi` dựng lại từ đầu ở job khác và đẩy image đó đi.
+Hai image cùng nội dung nên rủi ro thấp, nhưng đây là món nợ của #68 và nó được ghi lại thay vì bị làm mờ đi.
+
+**Cột `Sự cố` dịch chỗ, và nó dịch theo hướng làm đẹp số liệu.**
+Đây là chênh lệch nặng nhất trong năm cái.
+Ở Giai đoạn thủ công không có gì chặn giữa merge và prod, nên một thay đổi hỏng đi thẳng tới prod và vào thẳng change failure rate; cả hai lần hỏng của giai đoạn đó đều như vậy.
+Ở Giai đoạn pipeline, `kiem-tra` chạy trên pull request và chặn merge, nên phần lớn lỗi cùng loại sẽ chết trước mốc `Merge` và không để lại dòng nào trong bảng.
+Nghĩa là change failure rate của giai đoạn này sẽ thấp một phần vì pipeline thật sự tốt hơn, và một phần vì tập lỗi bị chặn ở chỗ khác.
+Hai phần đó không tách được bằng dữ liệu quan sát, và đó chính là lý do #21 tồn tại: chỉ có tiêm lỗi có kiểm soát mới cho một mẫu số so được.
+
+Nếu báo cáo chỉ trích con số change failure rate mà bỏ đoạn này thì nó đang khoe một thành tích mà một nửa là do đổi chỗ đếm.
+
+### Một tài liệu phục vụ hai người đọc
+
+Đây là phần của #70, và cái khó của nó không phải viết mà là quyết định giữ lại cái gì.
+
+`docs/trien-khai-thu-cong.md` từ #11 rơi vào trạng thái nửa sống nửa chết.
+Các bước triển khai vẫn còn hiệu lực, vì triển khai vẫn làm tay cho tới #12 và #13, và `CLAUDE.md` vẫn trỏ người ta tới mục "Bảng lệnh" của nó sau mỗi lần merge có chạm mã.
+Kỷ luật bấm giờ thì đã chết, vì nó bảo ghi vào `docs/nhat-ky-thu-cong.md`, mà file đó đóng sổ ở #10.
+Tức là tài liệu đang chỉ người ta ghi vào một file cấm ghi.
+
+Có hai cách sai và một cách đúng.
+
+Viết lại thành tài liệu lịch sử thuần tuý thì sai, vì các bước vẫn đang được dùng.
+Xoá phần bấm giờ đi thì cũng sai, và sai nặng hơn: phần đó là bản ghi cách bộ dữ liệu của Giai đoạn thủ công được tạo ra, thứ mà báo cáo cần để nói về giới hạn của phép đo.
+Một bộ số liệu không kèm cách nó được sinh ra thì không phản biện được.
+
+Cách đúng là tách chứ không cắt.
+Phần mở đầu khai báo một quy ước duy nhất: mọi chỗ đã chết đều mang dấu **(đã đóng)** và nằm nguyên chỗ cũ, đọc như bản ghi chứ không làm theo.
+Trong mục "Bảng lệnh", ba lệnh lấy giờ và lệnh `gh pr view` bị chú thích lại, kèm cảnh báo đừng nhầm chúng với hai dòng có điều kiện vốn được phép mở dấu `#`.
+Hai mục về bấm giờ đổi tiêu đề thành `(đã đóng)` nhưng giữ nguyên văn bên trong.
+
+Dòng "không được dùng GitHub Actions hay bất kỳ CI nào" cũng được xử lý theo cùng lối.
+Nó vẫn đúng với tư cách luật của Giai đoạn thủ công, và đọc lướt thì thành ra mâu thuẫn với thứ #11 vừa merge.
+Nên nó không bị xoá mà được nói rõ là điều kiện của thí nghiệm, chi phối đúng khoảng thời gian năm mẫu đo được tạo ra, và khoảng đó đã khép lại.
+
+### Cổng gác thứ hai, và một lối đi không còn tức thì
+
+Phần còn lại của #70 nằm ở `CONTRIBUTING.md`, và nó quan trọng hơn vẻ ngoài vì đây chính là file định nghĩa mắt xích truy vết mà #22 dùng để tính lead time.
+
+Trước #11, việc bảo vệ `main` nằm ở đúng một chỗ là bắt buộc pull request, và file này kết lại bằng câu "không nằm ở số lượng người duyệt".
+Từ #11 rule có thêm một status check bắt buộc tên `kiem-tra` và bật `strict`, nên việc bảo vệ nằm ở hai chỗ.
+Lập luận vì sao không đòi approval được giữ nguyên chữ, vì lập luận đó không phụ thuộc vào #11: đồ án do một người làm, mà GitHub không cho tự duyệt pull request của chính mình.
+
+Hai hệ quả thực tế trước đó chưa được ghi ở đâu.
+
+`strict` chặn một nhánh đã cũ so với `main` ở trạng thái `BEHIND` cho tới khi nhánh được cập nhật rồi `kiem-tra` chạy lại và xanh trên commit mới.
+Đây là hành vi đúng của rule, nhưng lần đầu gặp thì rất dễ bị hiểu là hỏng.
+
+Và ngoại lệ push thẳng vào `main` không còn tức thì nữa.
+`CONTRIBUTING.md` vốn mô tả một lối đi hợp lệ: commit được push chính là head của một pull request đang mở và pull request ấy đã thoả mọi điều kiện của rule.
+Từ #11, "mọi điều kiện" bao gồm cả việc `kiem-tra` đã xanh trên chính commit đó, nên vẫn phải đẩy lên nhánh, chờ workflow chạy xong, rồi mới push được.
+Câu chữ cũ vẫn đúng về logic nhưng che mất thay đổi về hành vi, và đó là kiểu lệch khó thấy nhất khi đọc lại tài liệu.
+
+### Vì sao việc này thuộc về đề tài
+
+Chương 25 đặt đo lường ở chỗ cuối cùng của chuỗi, sau khi mọi thứ khác đã tự động.
+Mục này là về chỗ nối giữa cái tự động và cái đo được, và nó cho thấy chỗ nối đó không tự có.
+
+Máy ghi lại nhiều hơn người rất nhiều, nhưng máy không nói cho biết trường nào có nghĩa.
+Người bấm giờ có đúng một cách hiểu về "lúc xong"; GitHub Actions có ít nhất ba, và cả ba đều trả về một chuỗi thời gian hợp lệ.
+Tự động hoá vì vậy không xoá bỏ việc phải định nghĩa, nó chỉ đẩy việc ấy sang một chỗ khác và làm nó khó thấy hơn.
+
+Phần của #70 thì nói một chuyện khác, về configuration management theo nghĩa hẹp nhất của từ đó.
+Khi một ranh giới dịch chuyển, thứ hỏng trước tiên không phải mã mà là tài liệu mô tả cách làm việc, và không có test nào đỏ khi điều đó xảy ra.
+Hai file của #70 đều mô tả đường đi của một thay đổi, nên để chúng lệch thì #22 dựng lại sai một mắt xích mà vẫn ra được một con số.
+
+### Số liệu
+
+Mục này trích đúng một đại lượng, và nói rõ nó không phải lead time.
+
+Hai workflow run hiện có trên `main` cho `Hoàn tất build` trừ `Bắt đầu` bằng **76 giây ở cả hai**, tính từ bảng trong `docs/nhat-ky-pipeline.md`.
+Cột `Chờ` là 4 giây và 8 giây.
+
+Ba lý do khiến con số này chưa nói được gì về Luận điểm.
+
+Chuỗi của Giai đoạn pipeline hôm nay dừng ở `Hoàn tất build`, vì triển khai vẫn làm tay.
+Lead time chỉ tính được khi #13 xong, và trích con số 76 giây như lead time sẽ là so một phần của giai đoạn này với trọn vẹn giai đoạn kia.
+
+Hai mẫu đều là thay đổi chỉ chạm tài liệu và cấu hình, không phải thay đổi cỡ chuẩn theo cách `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` dùng từ này.
+Dòng `#11` còn đặc biệt hơn, vì nó là lần chạy của chính commit dựng nên pipeline.
+
+Và hai mẫu thì không đủ để nói về độ ổn định, kể cả khi chúng bằng nhau tới từng giây.
+
+### Dẫn chứng
+
+- Định nghĩa từng mốc, ba trường bị loại và năm chênh lệch: `docs/nhat-ky-pipeline.md`
+- Lệnh trích mốc thô và đầu ra nguyên văn của lần chạy thật: cùng file, mục "Lệnh trích mốc thô"
+- Bảng mốc thô hai dòng hiện có: cùng file, mục "Bảng"
+- Bài học gốc về định nghĩa chốt muộn: mục "2026-07-29 - Đóng Giai đoạn thủ công, và cái giá của việc chốt một định nghĩa muộn" của file này
+- Quy ước tách phần còn hiệu lực và phần đã đóng: phần mở đầu của `docs/trien-khai-thu-cong.md`
+- Cổng gác thứ hai và hệ quả lên ngoại lệ push thẳng: mục "Pull request tham chiếu issue" của `CONTRIBUTING.md`
+- Từ vựng cho file nhật ký mới: mục "Nhật ký pipeline" trong `CONTEXT.md`
+
+### Đang ở đâu sau mục này
+
+**Định nghĩa đo lường của Giai đoạn pipeline đã chốt**, và mốc thô từ nay chép vào `docs/nhat-ky-pipeline.md` chứ không chép đi đâu khác.
+Nhóm C còn #12, #13 và #14.
+
+Ticket kế tiếp là **#12** (C2, triển khai staging tự động kèm smoke test), đã hết blocker.
+Nó là chỗ gọi lại `image.yml` lần đầu, tức phép thử thật cho quyết định về trục tái sử dụng ở mục trước.
+Nó cũng sẽ làm bảng của `docs/nhat-ky-pipeline.md` nhận thêm cột, và làm phần "còn hiệu lực" của `docs/trien-khai-thu-cong.md` co lại đúng một nửa.
+
+Hai yêu cầu còn nợ, cả hai đều chưa ticket nào nhận, và cả hai đã được ghi ở `docs/nhat-ky-pipeline.md` chứ không chỉ nằm ở đây.
+
+Thứ nhất, Giai đoạn pipeline cần ít nhất một thay đổi chạm `infra/postgres/init.sql`, vì cả hai lần phát hành thất bại của giai đoạn trước đều truy về đúng một thay đổi schema.
+Thứ hai, mẫu đo thật của giai đoạn này chỉ bắt đầu khi có một thay đổi chạm `services/` đi qua chuỗi đầy đủ, mà chuỗi đó chưa đầy đủ cho tới #13.
