@@ -37,6 +37,8 @@ Mốc thô là thứ không dựng lại được nếu ghi sai, còn số dẫn
 | #5 | 49460b4 | prod | 2026-07-28T15:04 | 2026-07-28T15:13 | 2026-07-28T15:18 | phát hành thất bại, quên xoá volume, xem ghi chú và mục đính chính |
 | #6 | 555bc78 | staging | 2026-07-28T16:05 | 2026-07-28T16:06 | 2026-07-28T16:08 | không |
 | #6 | 555bc78 | prod | 2026-07-28T16:05 | 2026-07-28T16:06 | 2026-07-28T16:21 | phát hành thất bại, prod thiếu bảng từ #5, xem ghi chú |
+| #7 | 5a60048 | staging | 2026-07-29T02:39 | 2026-07-29T02:40 | 2026-07-29T02:42 | không, nhưng dòng này có thêm một bước đo, xem ghi chú khác |
+| #7 | 5a60048 | prod | 2026-07-29T02:39 | 2026-07-29T02:40 | 2026-07-29T02:43 | không |
 
 ## Ghi chú sự cố
 
@@ -140,3 +142,25 @@ Hai con số phải tách bạch khi tổng hợp ở #10, vì cùng một sự 
 
 - Change failure rate: tính **một** lần phát hành thất bại cho #6, theo đúng định nghĩa ở `docs/trien-khai-thu-cong.md` là đỏ ở prod. Quy tắc đó cố ý không hỏi nguyên nhân thuộc về ai.
 - MTTR: khoảng hỏng thật kéo từ `2026-07-28T15:16` tới `2026-07-28T16:21`, tức 65 phút, và nó thuộc về sự cố của #5 chứ không phải của #6. Gán 13 phút vào đây là đếm thiếu gần năm lần.
+
+## Ghi chú khác
+
+Mục này dành cho chuyện làm một dòng trong bảng không so sánh trực tiếp được với dòng khác, dù dòng đó không có sự cố nào.
+
+### #7 staging
+
+Dòng này có thêm một bước không nằm trong "Bảng lệnh", nên cột `Hoàn tất` của nó cao hơn một lần triển khai chỉ chạy đúng quy trình.
+
+Tiêu chí nghiệm thu của #7 đòi kiểm rằng `/readyz` đổi trạng thái trong vài giây khi mất cơ sở dữ liệu, mà bộ kiểm thử chỉ gửi HTTP nên không có cách nào dừng Postgres.
+Việc đó thành một bước tay chạy đúng một lần, đặt sau bước 4 và trước mốc `Hoàn tất` của staging.
+Bước này cố ý **không** được thêm vào "Bảng lệnh", vì nó chỉ đúng cho thay đổi này; thủ tục ghi ở issue #7.
+
+Kết quả quan sát được, trên `link`:
+
+| Trạng thái Postgres | `/readyz` | `/healthz` |
+|---|---|---|
+| `pause` | 503 | 200 |
+| `unpause` | 200 | - |
+
+Prod không chạy bước này, nên cột `Hoàn tất` của dòng `#7` `prod` so sánh trực tiếp được với các mẫu trước.
+Khi tổng hợp ở #10, dòng staging của #7 phải trừ hao, hoặc dùng dòng prod làm đại diện cho mẫu này.
