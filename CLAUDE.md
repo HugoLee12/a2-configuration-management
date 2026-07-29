@@ -35,8 +35,7 @@ Mã nguồn ở `services/`, hạ tầng ở `infra/` và `compose.yaml`, kiểm
 Cách dựng, cách chạy và hình dạng của hệ nằm ở `README.md`; đừng chép lại vào đây.
 
 Ba service là `link`, `redirect` và `stats`.
-`stats` là worker chạy nền, không nằm trên đường phục vụ request nào, nhưng vẫn nghe HTTP nội bộ để trả lời hai đường dẫn thăm dò `/healthz` và `/readyz` mà nginx chuyển tiếp dưới `/internal/stats/`.
-Không service nào có mục `ports:`, nên nginx vẫn là cửa vào duy nhất.
+`stats` là worker chạy nền, không nằm trên đường phục vụ request nào, nhưng vẫn với tới được bằng HTTP qua hai đường dẫn thăm dò; xem `README.md`.
 
 Hai ràng buộc dễ vi phạm nếu không biết trước:
 

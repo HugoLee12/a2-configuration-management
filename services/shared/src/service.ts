@@ -23,8 +23,13 @@ export const pool = new Pool();
 //   của link còn kết nối rỗi.
 //
 // Hạn giờ không đặt thẳng lên `pool` vì nó sẽ chặt mọi câu lệnh nghiệp vụ ở 2 giây,
-// mà chu kỳ tổng hợp của worker stats quét cả bảng visits và không có lý do gì phải
-// xong trong 2 giây.
+// mà chu kỳ tổng hợp của worker stats quét cả bảng visits. Với #21, nơi worker bị
+// dừng có chủ đích rồi cho sống lại, chu kỳ đầu tiên phải xử lý cả đống tồn đọng và
+// sẽ hết giờ mỗi lần, tức cơ chế phục hồi tự khoá chính nó.
+//
+// Cái giá của việc tách: /readyz báo sẵn sàng dựa trên một pool mà không request
+// nghiệp vụ nào đi qua, nên pool nghiệp vụ cạn hoặc kẹt trong lúc Postgres vẫn khoẻ
+// là kiểu hỏng mà tín hiệu này không bắt được. Ghi ở #7 thành chốt thứ tư.
 const probePool = new Pool({
   max: 1,
   connectionTimeoutMillis: PROBE_TIMEOUT_MS,

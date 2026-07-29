@@ -8,11 +8,11 @@ Bối cảnh đồ án nằm ở `CONTEXT.md`, quy ước đóng góp ở `CONTR
 ## Hình dạng của hệ
 
 ```
-người dùng -> nginx -+-> /api/v1/               -> service link     -+
-                     |                                               |
-                     +-> /<mã>                  -> service redirect -+-> Postgres
-                     |                                               |
-                     +-> /internal/stats/<probe> -> worker stats     -+
+người dùng -> nginx -+-> /api/v1/  -> service link     -+
+                     |                                  |
+                     +-> /<mã>     -> service redirect -+-> Postgres
+                     |                                  |
+                     +-> /internal/ -> cả ba service ---+
 ```
 
 nginx là cửa vào duy nhất.
@@ -36,12 +36,10 @@ curl localhost:8081/internal/stats/readyz
 # {"status":"sẵn sàng"}
 ```
 
-Hai câu hỏi này cố ý tách bạch.
-Tiến trình còn chạy không có nghĩa là nó phục vụ được, và nếu gộp lại thì mất Postgres sẽ thành tín hiệu khởi động lại container, trong khi khởi động lại không cứu được gì.
+Hai câu hỏi này cố ý tách bạch: tiến trình còn chạy không có nghĩa là nó phục vụ được.
 `/readyz` là tín hiệu mà cơ chế phát hành blue-green dùng để quyết định chuyển lưu lượng hay huỷ bản mới, và cũng là cổng gác mà bộ kiểm thử chờ trước khi chạy test đầu tiên.
 
 Nhánh `/internal/` là lối duy nhất hỏi được `stats`, vì worker không nằm trên đường phục vụ request nào.
-Nó không nuốt mã ngắn nào: prefix `/internal/` dài 10 ký tự trong khi mã ngắn luôn đúng 7.
 
 ## Chạy hệ
 
