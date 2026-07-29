@@ -132,10 +132,11 @@ npm test                                   # mặc định bắn vào staging, h
 BASE_URL=http://localhost:8080 npm test    # hoặc bắn vào prod
 ```
 
-Kiểm tra kiểu:
+Kiểm tra kiểu và lint:
 
 ```sh
 npm run typecheck
+npm run lint
 ```
 
 ## Ghi chú về mã nguồn
@@ -146,5 +147,13 @@ Container nào chạy service nào là do `command` trong `compose.yaml` quyết
 Node 24 chạy thẳng TypeScript nên không có bước biên dịch riêng: kiểu được kiểm bằng `tsc --noEmit`, còn lúc chạy thì kiểu bị bóc đi.
 Đổi lại `tsconfig.json` bật `erasableSyntaxOnly`, nghĩa là không dùng được `enum`, `namespace` hay parameter property.
 
-Giai đoạn thủ công **cố tình chưa có pipeline**, xem `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md`.
-Mọi lần build và triển khai đều làm tay theo `docs/trien-khai-thu-cong.md` và được ghi giờ vào `docs/nhat-ky-thu-cong.md`.
+## Pipeline
+
+Mỗi pull request chạy `.github/workflows/ci.yml`: cài phụ thuộc, kiểm tra kiểu, lint, dựng stack staging rồi chạy bộ kiểm thử qua nginx, sau đó đóng gói image và đẩy lên GHCR với tag là SHA của commit.
+Bước đóng gói nằm riêng ở `.github/workflows/image.yml` dạng `workflow_call`, để #12 và #13 gọi lại chính nó thay vì chép bước build sang chỗ khác.
+
+Build vì vậy không còn làm tay nữa.
+**Triển khai thì vẫn làm tay** theo `docs/trien-khai-thu-cong.md`, cho tới khi #12 tự động hoá staging và #13 tự động hoá prod.
+
+Giai đoạn nào đang chạy thì tra ở mục cuối `docs/nhat-ky-du-an.md`; đừng tra ở đây, vì file này mô tả hệ chứ không theo dõi tiến độ.
+Vì sao Giai đoạn thủ công cố tình không có pipeline: `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md`.

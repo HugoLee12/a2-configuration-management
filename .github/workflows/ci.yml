@@ -1,0 +1,60 @@
+# Cổng gác của mọi pull request, và là mốc đầu tiên của Giai đoạn pipeline.
+# Thời gian chạy từng bước đọc được trên giao diện Actions; #67 chốt xem trường nào
+# trong số đó là mốc chính thức để tính lead time.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  # Kiểm thử là hộp đen và chỉ đi qua nginx, nên nó cần cả stack đang chạy chứ không
+  # chạy được trên mã nguồn trần. Đây là ràng buộc của #3, không phải chi tiết CI.
+  kiem-tra:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Kiểm tra kiểu
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Dựng stack staging
+        run: docker compose --env-file env/staging.env up -d --build
+
+      # `npm test` tự chờ cả ba service báo /readyz trước khi chạy test đầu tiên,
+      # nên ở đây không cần bước chờ riêng.
+      - name: Kiểm thử qua nginx
+        run: npm test
+
+      # Container chết thì đầu ra của `npm test` chỉ nói là request hỏng, không nói
+      # vì sao. Log của stack là thứ duy nhất trả lời được, mà nó biến mất cùng runner.
+      - name: Log của stack khi có bước đỏ
+        if: failure()
+        run: docker compose --env-file env/staging.env logs --no-color
+
+      - name: Dọn stack
+        if: always()
+        run: docker compose --env-file env/staging.env down -v
+
+  dong-goi:
+    needs: kiem-tra
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/image.yml
+    with:
+      # Trên pull request thì github.sha là commit merge giả mà GitHub dựng tạm, một
+      # commit không tồn tại trên nhánh nào. Tag theo nó thì về sau không truy được
+      # image ngược về thay đổi, mà đó lại đúng là mắt xích #22 cần để tính lead time.
+      tag: ${{ github.event.pull_request.head.sha || github.sha }}
