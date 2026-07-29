@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
-import { BASE_URL, createLink, READY_TIMEOUT_MS, SERVICES, waitForStack } from "./stack.ts";
+import { BASE_URL, createLink, probe, READY_TIMEOUT_MS, SERVICES, waitForStack } from "./stack.ts";
 
 // Worker tổng hợp theo chu kỳ nên số của nó tới muộn hơn lượt truy cập vài giây.
 const AGGREGATE_TIMEOUT_MS = 15_000;
@@ -19,16 +19,37 @@ const AGGREGATE_TIMEOUT_MS = 15_000;
 // đóng lại được chính là điều đang cần chứng minh, xem phép kiểm cardinality.
 const REDIRECT_ENDPOINTS = new Set(["/:code", "/healthz", "/readyz", "/metrics", "unknown"]);
 
+const SUCCESSFUL_CYCLES = 'stats_aggregation_cycles_total{result="success"}';
+
+// Request không khớp route nào gom về nhãn "unknown", kể cả request bị chặn
+// trước khi router kịp chọn handler.
+const REJECTED_BEFORE_ROUTE =
+  'http_requests_total{method="POST",endpoint="unknown",status="400"}';
+
 async function readMetrics(service: (typeof SERVICES)[number]): Promise<string> {
-  const res = await fetch(`${BASE_URL}/internal/${service}/metrics`);
+  const res = await probe(service, "metrics");
   assert.equal(res.status, 200, `${service} lẽ ra phải trả về metrics`);
   return res.text();
 }
 
-/** Giá trị của một chuỗi thời gian không nhãn, 0 nếu nó chưa xuất hiện. */
-function value(metrics: string, name: string): number {
-  const line = metrics.split("\n").find((l) => l.startsWith(`${name} `));
-  return line ? Number(line.slice(name.length + 1)) : 0;
+/**
+ * Giá trị của một chuỗi thời gian, 0 nếu nó chưa xuất hiện.
+ * `series` là cả tên lẫn phần nhãn nếu có, đúng như nó nằm trên một dòng.
+ */
+function value(metrics: string, series: string): number {
+  const line = metrics.split("\n").find((l) => l.startsWith(`${series} `));
+  return line ? Number(line.slice(series.length + 1)) : 0;
+}
+
+/** Tạo một link mới rồi truy cập nó một lượt, trả về mã ngắn. */
+async function newVisitedCode(): Promise<string> {
+  const res = await createLink({ url: "https://example.com/dich-den" });
+  assert.equal(res.status, 201);
+  const { code } = (await res.json()) as { code: string };
+
+  const visit = await fetch(`${BASE_URL}/${code}`, { redirect: "manual" });
+  assert.equal(visit.status, 302);
+  return code;
 }
 
 /** Mọi giá trị nhãn `endpoint` xuất hiện trong số đếm request. */
@@ -40,17 +61,12 @@ function endpointLabels(metrics: string): Set<string> {
   return new Set(labels);
 }
 
-async function visit(code: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/${code}`, { redirect: "manual" });
-  assert.equal(res.status, 302);
-}
-
 describe("endpoint metrics qua nginx", () => {
   before(waitForStack, { timeout: READY_TIMEOUT_MS + 5_000 });
 
   it("cả ba service phơi metrics theo định dạng công cụ chuẩn đọc được", async () => {
     for (const service of SERVICES) {
-      const res = await fetch(`${BASE_URL}/internal/${service}/metrics`);
+      const res = await probe(service, "metrics");
       assert.equal(res.status, 200, `${service} lẽ ra phải trả về metrics`);
 
       // Prometheus nhận diện phiên bản định dạng qua đúng header này.
@@ -67,7 +83,7 @@ describe("endpoint metrics qua nginx", () => {
   it("có số đếm request phân theo endpoint và mã trạng thái", async () => {
     for (const service of SERVICES) {
       // Chính request thăm dò này là thứ được đếm ở lần đọc metrics ngay sau đó.
-      await fetch(`${BASE_URL}/internal/${service}/healthz`);
+      await probe(service, "healthz");
       const metrics = await readMetrics(service);
 
       const line = metrics
@@ -98,10 +114,7 @@ describe("endpoint metrics qua nginx", () => {
     const linksBefore = value(await readMetrics("link"), "links_created_total");
     const redirectsBefore = value(await readMetrics("redirect"), "redirects_total");
 
-    const res = await createLink({ url: "https://example.com/dich-den" });
-    assert.equal(res.status, 201);
-    const { code } = (await res.json()) as { code: string };
-    await visit(code);
+    await newVisitedCode();
 
     assert.ok(
       value(await readMetrics("link"), "links_created_total") > linksBefore,
@@ -113,11 +126,28 @@ describe("endpoint metrics qua nginx", () => {
     );
   });
 
+  it("request bị từ chối trước khi vào route vẫn được đếm", async () => {
+    // Body hỏng bị chính express.json() chặn bằng next(err), mà next(err) bỏ qua
+    // mọi middleware đăng ký sau nó. Nếu phần đo đứng sau express.json() thì đúng
+    // những mã 4xx này biến mất khỏi số đếm, và đó là loại request mà một số đếm
+    // phân theo mã trạng thái cần thấy nhất.
+    const before = value(await readMetrics("link"), REJECTED_BEFORE_ROUTE);
+
+    const res = await fetch(`${BASE_URL}/api/v1/links`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{ khong phai json",
+    });
+    assert.equal(res.status, 400);
+
+    assert.ok(
+      value(await readMetrics("link"), REJECTED_BEFORE_ROUTE) > before,
+      "request bị từ chối trước khi vào route không được đếm",
+    );
+  });
+
   it("mã ngắn không sinh nhãn endpoint mới", async () => {
-    const { code } = (await (
-      await createLink({ url: "https://example.com/dich-den" })
-    ).json()) as { code: string };
-    await visit(code);
+    await newVisitedCode();
 
     const labels = endpointLabels(await readMetrics("redirect"));
     // Nếu nhãn lấy theo đường dẫn thô thì mỗi mã ngắn thành một chuỗi thời gian
@@ -130,22 +160,15 @@ describe("endpoint metrics qua nginx", () => {
 
   it("worker stats đếm chu kỳ tổng hợp và số lượt đã cộng dồn", async () => {
     const before = await readMetrics("stats");
-    const cyclesBefore = Number(
-      /^stats_aggregation_cycles_total\{result="success"\} ([0-9.e+]+)$/m.exec(before)?.[1] ?? 0,
-    );
+    const cyclesBefore = value(before, SUCCESSFUL_CYCLES);
     const visitsBefore = value(before, "stats_visits_aggregated_total");
 
-    const { code } = (await (
-      await createLink({ url: "https://example.com/dich-den" })
-    ).json()) as { code: string };
-    await visit(code);
+    await newVisitedCode();
 
     const deadline = Date.now() + AGGREGATE_TIMEOUT_MS;
     for (;;) {
       const metrics = await readMetrics("stats");
-      const cycles = Number(
-        /^stats_aggregation_cycles_total\{result="success"\} ([0-9.e+]+)$/m.exec(metrics)?.[1] ?? 0,
-      );
+      const cycles = value(metrics, SUCCESSFUL_CYCLES);
       const visits = value(metrics, "stats_visits_aggregated_total");
       if (cycles > cyclesBefore && visits > visitsBefore) return;
       if (Date.now() > deadline) {

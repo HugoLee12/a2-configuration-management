@@ -46,7 +46,7 @@ services:
 
   # Worker chạy nền: nó chỉ đọc bảng visits rồi cộng dồn vào link_stats theo chu kỳ.
   # Nó không nằm trên đường phục vụ request nào, nhưng vẫn nghe HTTP nội bộ để trả
-  # lời hai đường dẫn thăm dò; nginx chuyển tiếp chúng dưới /internal/stats/.
+  # lời các đường dẫn vận hành; nginx chuyển tiếp chúng dưới /internal/stats/.
   stats:
     <<: *service
     command: ["node", "services/stats/src/index.ts"]

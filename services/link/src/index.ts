@@ -28,8 +28,14 @@ const linksCreated = new Counter({
 });
 
 const app = express();
-app.use(express.json());
+
+// Trước `express.json()`, không chỉ trước các route. Body hỏng hoặc quá cỡ bị
+// chính body-parser từ chối bằng `next(err)`, mà `next(err)` nhảy thẳng tới
+// error handler và bỏ qua mọi middleware đăng ký sau nó. Đặt sau thì đúng những
+// mã 400 và 413 đó biến mất khỏi số đếm, tức là mất đúng phần mà một số đếm
+// phân theo mã trạng thái cần thấy nhất.
 mountMetrics(app);
+app.use(express.json());
 mountProbes(app);
 
 // Số phiên bản nằm sẵn trong đường dẫn ngay từ v1, để #18 thêm được v2 chạy song
