@@ -1,0 +1,57 @@
+# Đơn vị dùng lại của pipeline. Nó không nhận tên service làm tham số, vì ba service
+# đã dùng chung đúng một Dockerfile và một image từ #3: tham số hoá theo service ở
+# đây chỉ đổi được cái tên trên tag chứ không đổi được một byte nào trong image.
+# Chỗ tái sử dụng thật vì vậy nằm giữa các workflow, không nằm giữa ba service:
+# #12 và #13 sẽ gọi lại chính file này thay vì chép bước build sang chỗ khác.
+name: Đóng gói image
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag gắn cho image, là SHA đầy đủ của commit được đóng gói
+        required: true
+        type: string
+    outputs:
+      image:
+        description: Tham chiếu đầy đủ của image vừa đẩy, dạng ghcr.io/<kho>:<sha>
+        value: ${{ jobs.image.outputs.image }}
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.dung-va-day.outputs.image }}
+    steps:
+      # Phải chỉ đích danh ref, không được để mặc định. Trên pull request thì
+      # actions/checkout lấy refs/pull/N/merge, tức commit merge tạm mà GitHub
+      # dựng ra; image sẽ mang nội dung của commit đó nhưng lại đeo tag là SHA
+      # của commit thật. Tag nói một đằng, bytes một nẻo, và mắt xích truy vết
+      # mà #22 cần thì đứt đúng ở chỗ không ai nghĩ là nó đứt.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Đăng nhập GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      # Tên kho trên GitHub giữ nguyên chữ hoa, còn tên image trên registry thì bắt
+      # buộc thường hết, nên phải hạ chữ chứ không dùng thẳng github.repository.
+      # Giá trị của biểu thức đi qua env chứ không nội suy thẳng vào thân script:
+      # `tag` do phía gọi truyền vào nên nó là đầu vào không tin được.
+      - name: Dựng và đẩy image
+        id: dung-va-day
+        env:
+          KHO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          image="ghcr.io/$(echo "$KHO" | tr '[:upper:]' '[:lower:]'):$TAG"
+          docker build -t "$image" .
+          docker push "$image"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "Đã đẩy $image" >> "$GITHUB_STEP_SUMMARY"
