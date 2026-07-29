@@ -47,7 +47,8 @@ Bản ghi thời gian từng lần build và triển khai tay trong giai đoạn
 Là dữ liệu nghiên cứu, phải ghi ngay lúc làm vì không dựng lại được sau.
 
 **Nhật ký dự án**:
-Ghi chú tường thuật theo thứ tự thời gian trong `docs/nhat-ky-du-an.md`, mỗi ticket đóng lại thì thêm một mục.
+Ghi chú tường thuật theo thứ tự thời gian trong `docs/nhat-ky-du-an.md`, sao cho mọi ticket đã đóng đều được ít nhất một mục nhắc tới.
+Một mục gộp được nhiều ticket, và ticket quy trình mỏng thì gộp vào mục của ticket kế tiếp thay vì viết riêng; quy tắc đầy đủ ở `CLAUDE.md`.
 Tồn tại để viết báo cáo và dựng slide, không chứa số đo nào và không thay thế Nhật ký thủ công.
 _Avoid_: nhật ký, changelog, worklog
 
