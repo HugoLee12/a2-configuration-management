@@ -1789,3 +1789,160 @@ Hai yêu cầu còn nợ, cả hai đều chưa ticket nào nhận, và cả hai
 
 Thứ nhất, Giai đoạn pipeline cần ít nhất một thay đổi chạm `infra/postgres/init.sql`, vì cả hai lần phát hành thất bại của giai đoạn trước đều truy về đúng một thay đổi schema.
 Thứ hai, mẫu đo thật của giai đoạn này chỉ bắt đầu khi có một thay đổi chạm `services/` đi qua chuỗi đầy đủ, mà chuỗi đó chưa đầy đủ cho tới #13.
+
+## 2026-07-29 - Staging tự cập nhật, và một cột mốc suýt đổi nghĩa mà không ai biết
+
+**Ticket**: #12 (C2)
+**Pull request**: #76
+**Phục vụ**: ô Hiện thực & CI/CD của rubric, mục 25.4 Continuous delivery của sách; và là điều kiện tiên quyết của #13
+
+### Ticket đòi cái gì
+
+Merge vào `main` thì staging tự cập nhật, không ai gõ lệnh nào, và sau khi cập nhật thì một bộ smoke test chạy từ ngoài vào để khẳng định hệ thật sự phục vụ được.
+Smoke test phải là tập con của chính bộ kiểm thử đang có chứ không phải bộ thứ hai viết riêng, phải nhanh, và trượt thì lần triển khai phải đỏ ở chỗ nhìn thấy được.
+
+Kèm theo là một việc tài liệu đã ghi sẵn từ khi đóng #10: ràng buộc "merge xong thì nhắc triển khai tay" trong `CLAUDE.md` sẽ sai với staging, và việc phải làm là **thu hẹp** nó lại còn prod chứ không xoá.
+
+### Chỗ khó không phải viết workflow, mà là staging sống ở đâu
+
+Câu "staging tự cập nhật" không có nghĩa xác định cho tới khi trả lời được staging nằm trên máy nào.
+
+Giai đoạn thủ công định nghĩa staging là `localhost:8081` trên máy chủ đồ án.
+Runner của GitHub là máy ảo dùng một lần trên mây và không có đường nào tới máy ấy: không mở được cổng, không nối ngược được, còn VPS lẫn PaaS thì `docs/adr/0004-ha-tang-phat-hanh-va-do-luong.md` đã loại từ đầu.
+
+Hai lối đi, và chúng khác nhau ở thứ được chứng minh chứ không ở công sức.
+
+Lối thứ nhất là dựng stack ngay trên runner của GitHub, smoke test xong thì runner biến mất cùng stack.
+Không phải cài gì, nhưng nó gần như trùng với job `kiem-tra` đã có, không để lại môi trường nào còn sống, và tiêu chí cuối của ticket sẽ thành một câu nói dối: muốn có staging trên máy thì vẫn phải gõ tay đúng như cũ.
+
+Lối thứ hai là đăng ký một self-hosted runner ở chính máy ấy, và job triển khai chạy tại chỗ.
+Chọn lối này, vì ba lý do xếp theo sức nặng.
+
+`docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` đòi giữa hai giai đoạn chỉ được đổi **đúng một biến**.
+Đổi luôn cả chỗ staging sống là biến thứ hai, và nó rơi đúng vào đại lượng đang đo.
+
+#13 với blue-green, #15 với Prometheus và Grafana, #21 với tiêm lỗi rồi đo thời gian phục hồi: cả ba đều cần một môi trường còn sống sau khi workflow kết thúc.
+Lối thứ nhất không xây tiếp lên được, nên chọn nó là mua rẻ hôm nay rồi làm lại ở #13.
+
+Và một staging chỉ tồn tại trong lòng một workflow run thì không ai mở trình duyệt nhìn được nó, mà phần Demo của A2 thì cần nhìn được.
+
+Cái giá phải trả được ghi ra chứ không giấu: phải cài runner một lần, và runner không chạy thì lần triển khai xếp hàng chờ chứ không hỏng.
+
+### Kho công khai cộng self-hosted runner là một rủi ro có thật
+
+Đây là chỗ dễ làm sai nhất của lựa chọn trên, nên nó được xử lý ngay chứ không để lại.
+
+GitHub cảnh báo sẵn: self-hosted runner trên kho công khai cho phép một pull request từ fork chạy mã tuỳ ý trên máy thật.
+Chỗ chặn là `if: github.event_name == 'push'` ở job triển khai, nghĩa là job chỉ tồn tại với commit đã qua `kiem-tra` và đã được merge, không bao giờ với mã của một pull request.
+
+Điều kiện ấy trông như một dòng cho gọn, nên nó được ghi lý do ngay tại chỗ trong `ci.yml` và nhắc lại ở `README.md`.
+Một dòng bảo vệ mà không ai biết nó bảo vệ cái gì thì lần dọn dẹp sau sẽ có người gỡ nó đi.
+
+### Một cột mốc suýt đổi nghĩa mà không có gì báo động
+
+Đây là phần đáng giá nhất của ticket này, và nó không nằm trong tiêu chí nghiệm thu nào.
+
+`docs/nhat-ky-pipeline.md` vừa chốt ở #67 rằng `Hoàn tất build` là `max(jobs[].completed_at)` của workflow run.
+Lúc chốt, định nghĩa ấy đúng, vì `dong-goi` là job cuối cùng.
+
+Thêm job `trien-khai-staging` chạy sau nó thì `max` lập tức đổi nghĩa: nó thành mốc kết thúc của bước triển khai chứ không còn là mốc kết thúc của bước đóng gói.
+Cột không đổi tên, số vẫn là một chuỗi thời gian hợp lệ, không test nào đỏ, và mọi dòng trước với sau #12 nằm chung một cột với hai nghĩa khác nhau.
+
+Đây đúng là hình dạng của lỗi mà #10 đã trả giá để học, chỉ khác đường vào: lần đó là chọn nhầm một trường, lần này là thêm một job.
+Cách chữa là neo mốc vào **tên của một job** chứ không vào thứ tự: `dong-goi / image` cho build, `trien-khai-staging` cho staging.
+Tên job đổi thì workflow gãy ngay và có người biết; thứ tự job đổi thì không ai biết.
+
+Chi tiết dễ vấp: tên job của một reusable workflow là `<job gọi> / <job được gọi>`, nên job đóng gói hiện ra trong API là `dong-goi / image` chứ không phải `dong-goi`, dù `dong-goi` là tên duy nhất nhìn thấy khi đọc `ci.yml`.
+
+Lệnh trích mốc thô được viết lại theo tên job và đã chạy thật; đầu ra nguyên văn nằm trong `docs/nhat-ky-pipeline.md`.
+Nó lộ ra thêm một chuyện: bảng ở đó mới có hai dòng trong khi `main` đã nhận năm run, vì #67, #70 và #74 merge sau lúc file được viết.
+Ba dòng ấy được chép nốt trong chính lần sửa này, đúng lý do file đó tồn tại là mốc bên GitHub có hạn sử dụng.
+
+### Smoke test là tập con, không phải bộ thứ hai
+
+Tiêu chí "dùng lại chính bộ kiểm thử của hệ" được đáp bằng một dòng trong `package.json`:
+
+```json
+"smoke": "node --test tests/suc-khoe-va-san-sang.test.ts tests/rut-gon-va-chuyen-huong.test.ts"
+```
+
+Không có file test mới nào.
+Hai file được chọn là sẵn sàng của cả ba service, và đường tạo link rồi chuyển hướng.
+Ba file còn lại nằm ngoài vì lý do khác nhau: `thong-ke-luot-truy-cap` phải chờ worker chạy vài chu kỳ tổng hợp nên nó chậm theo thiết kế, `metrics` kiểm chuyện đo đạc chứ không kiểm chuyện phục vụ được, `xac-thuc-dia-chi` kiểm các nhánh từ chối đầu vào.
+
+Cả năm file vẫn chạy đủ ở job `kiem-tra` trên mỗi pull request, nên không test nào bị bỏ.
+Việc chọn lại chỉ trả lời một câu hỏi khác: cái gì hỏng thì hệ coi như không phục vụ được, và đó mới là thứ đáng đứng chắn trên đường phát hành.
+
+Một chi tiết hoá ra là hệ quả trực tiếp của ràng buộc hộp đen ở #3: job triển khai không cần `npm ci`, vì bộ kiểm thử chỉ gửi HTTP nên nó không import gì ngoài `node:`.
+
+### Ba chỗ pipeline làm khác bàn tay người
+
+Ghi ở `docs/trien-khai-thu-cong.md` ngay dưới bước 3 và bước 4, vì đây là chênh lệch phải mang theo khi so số của hai giai đoạn.
+
+Pipeline luôn chạy `down -v` chứ không đọc `git show --stat` rồi tự quyết như người.
+Hai nhánh có điều kiện của bước làm tay vì thế biến mất: nhánh `restart nginx` cũng không cần vì container được dựng lại từ đầu.
+Đổi lại staging mất sạch dữ liệu sau mỗi lần merge, chấp nhận được vì nó chỉ chứa dữ liệu thử, và rẻ hơn nhiều so với một nhánh điều kiện không ai kiểm được.
+
+Pipeline chạy `up` **không kèm** `--build`, và dựng từ image đã đóng gói thay vì build lại từ mã nguồn.
+Đây là chỗ nó chặt hơn tay người, và nó trả một nửa món nợ mà pull request #68 để lại: `Hoàn tất staging` **là** "image đã đóng gói đã được kiểm trên môi trường thật", đúng nghĩa mà `Hoàn tất` của Giai đoạn thủ công mang.
+Nửa còn nợ vẫn nợ: `Hoàn tất build` vẫn chỉ có nghĩa "đã đẩy".
+
+Để làm được điều đó, `compose.yaml` nhận thêm biến `SERVICE_IMAGE` với mặc định khai trong từng file env, và job triển khai đè biến ấy bằng tham chiếu GHCR theo commit.
+`--no-build` không phải cho gọn mà là chốt chặn: thiếu nó thì Compose lặng lẽ dựng lại image từ mã nguồn khi `docker pull` hỏng, và staging chạy một bản không phải bản đã đóng gói, đúng loại lệch mà việc tag theo commit sinh ra để tránh.
+
+Và pipeline không có bước `ps` để mắt người nhìn năm dòng `Up`; câu hỏi ấy do smoke test trả lời bằng `/readyz` của cả ba service.
+
+### Một ràng buộc bị thu hẹp, và ba tài liệu co theo
+
+Ràng buộc trong `CLAUDE.md` không bị xoá mà bị thu về đúng phạm vi nó còn đúng: nhắc triển khai **prod** bằng tay, kèm câu là chỉ chạy khối prod của "Bảng lệnh".
+Lý do gốc của nó được giữ nguyên chữ, vì lý do ấy vẫn còn giá trị với phần còn làm tay: chạy hộ thì hai giai đoạn khác nhau ở hai biến chứ không phải một.
+
+`docs/trien-khai-thu-cong.md` nhận thêm một dấu thứ hai bên cạnh **(đã đóng)** đã có từ #70, là **(tự động từ #12)**, và giữ nguyên văn phần bên trong.
+Hai dấu ấy có ý nghĩa khác hẳn nhau, nên phần mở đầu mục "Bảng lệnh" được viết lại thành ba loại dòng bị chú thích: loại được phép mở dấu `#`, loại đã đóng, và loại đã tự động.
+Năm dòng staging trong khối lệnh bị chú thích lại, vì mở chúng ra không chỉ thừa mà còn phá: chúng dựng lại staging từ mã nguồn đè lên bản mà pipeline vừa triển khai từ image.
+
+`README.md` bỏ câu "triển khai vẫn làm tay", mô tả job thứ ba, và nhận một mục mới về runner tự quản.
+
+### Vì sao việc này thuộc về đề tài
+
+Chương 25 nói continuous delivery là đưa mỗi thay đổi tới một môi trường giống production càng sớm càng tốt, rồi để một bộ kiểm thử tự động quyết định nó đi tiếp hay dừng lại.
+Ticket này dựng đúng mắt xích ấy, nhưng thứ học được lại nằm ở hai chỗ mà mô tả trong sách không nhắc.
+
+Chỗ thứ nhất là tự động hoá không xoá được câu hỏi "chạy ở đâu".
+Nửa ngày của ticket này rơi vào việc nhận ra rằng "staging tự cập nhật" là một câu chưa có nghĩa cho tới khi biết staging sống trên máy nào, và rằng trả lời sai câu đó sẽ làm hỏng phép so sánh chứ không chỉ làm phiền lúc cài đặt.
+
+Chỗ thứ hai là mỗi lần chuỗi dài thêm một mắt, định nghĩa đo lường phải được đọc lại.
+Một cột mốc đã chốt bằng văn bản, có lý lẽ, có bảng đối chiếu, vẫn đổi nghĩa chỉ vì có một job mới chạy sau job cũ.
+Đây chính là configuration management theo nghĩa hẹp nhất: thứ hỏng trước tiên khi hệ thống lớn lên không phải mã, mà là những gì mô tả hệ thống, và không có test nào đỏ khi điều đó xảy ra.
+
+### Số liệu
+
+Chưa có mẫu nào cho cột `Hoàn tất staging`, vì run đầu tiên có job triển khai chính là run của pull request đóng ticket này.
+Năm dòng đang có trong `docs/nhat-ky-pipeline.md` đều chạy trước #12 nên cột ấy rỗng ở cả năm, và chúng không dùng được cho đại lượng `staging` của mục "Công thức".
+
+Con số duy nhất trích được lúc này vẫn là `Hoàn tất build` trừ `Bắt đầu`, nay có năm mẫu thay vì hai, và cột `Chờ` dao động từ 3 tới 8 giây.
+Lead time thì vẫn chưa tính được và sẽ chưa tính được cho tới khi #13 xong, vì chuỗi còn thiếu mắt prod.
+
+### Dẫn chứng
+
+- Job triển khai và lý do của từng lựa chọn: `.github/workflows/ci.yml`, job `trien-khai-staging`
+- Cách đăng ký runner tự quản và chỗ chặn rủi ro: mục "Runner tự quản cho staging" của `README.md`
+- Định nghĩa mốc mới, vì sao định nghĩa cũ đổi nghĩa, và lệnh trích viết lại: `docs/nhat-ky-pipeline.md`
+- Ba chỗ pipeline làm khác tay người: bước 3 và bước 4 của `docs/trien-khai-thu-cong.md`
+- Ràng buộc đã thu hẹp: mục "Ràng buộc phải tôn trọng" của `CLAUDE.md`
+- Bài học gốc về định nghĩa đổi nghĩa âm thầm: mục "2026-07-29 - Đóng Giai đoạn thủ công, và cái giá của việc chốt một định nghĩa muộn" của file này
+
+### Đang ở đâu sau mục này
+
+**Staging đã tự triển khai; prod vẫn làm tay.**
+Chuỗi của Giai đoạn pipeline hiện đi từ merge tới `Hoàn tất staging`, còn thiếu đúng mắt prod.
+
+Việc phải làm ngay sau khi merge pull request này là **đăng ký self-hosted runner** trên máy chủ đồ án, theo mục "Runner tự quản cho staging" của `README.md`.
+Chưa có runner thì job `trien-khai-staging` xếp hàng chờ và lần chạy trên `main` không kết thúc; đây là lần duy nhất việc ấy cần làm.
+
+Ticket kế tiếp là **#13** (C3, blue-green cho prod và rollback tự động), đã hết blocker.
+Nó đóng nốt chuỗi, làm lead time tính được lần đầu, và xoá hẳn ràng buộc nhắc triển khai tay trong `CLAUDE.md`.
+Nó cũng là chỗ gọi lại `image.yml`, thứ mà #12 hoá ra không cần vì job triển khai dùng image đã có sẵn tag chứ không đóng gói lại.
+
+Nhóm C sau đó còn #14.
+Hai yêu cầu còn nợ từ Giai đoạn thủ công vẫn nguyên và vẫn chưa ticket nào nhận: cần ít nhất một thay đổi chạm `infra/postgres/init.sql`, và cần một thay đổi chạm `services/` đi qua chuỗi đầy đủ.

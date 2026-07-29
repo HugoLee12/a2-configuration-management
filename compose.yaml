@@ -7,9 +7,13 @@ x-postgres-env: &postgres-env
   PGPASSWORD: ${POSTGRES_PASSWORD}
   PGDATABASE: links
 
+# SERVICE_IMAGE mặc định là tên image dựng tại chỗ, khai báo trong từng file env.
+# Job triển khai của `.github/workflows/ci.yml` đè biến này bằng tham chiếu GHCR
+# theo commit, rồi chạy `up` không kèm `--build`, để môi trường chạy đúng bytes đã
+# được đóng gói chứ không phải một bản dựng lại từ cùng mã nguồn.
 x-service: &service
   build: .
-  image: ${COMPOSE_PROJECT_NAME}-service
+  image: ${SERVICE_IMAGE}
   restart: unless-stopped
   depends_on:
     postgres:

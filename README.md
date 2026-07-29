@@ -84,6 +84,9 @@ docker compose --env-file env/prod.env    up -d --build   # prod, cổng 8080
 Hai môi trường tách biệt hoàn toàn: khác cổng, khác project name của Compose, nên khác container, khác network và khác volume dữ liệu.
 Dựng cả hai cùng lúc được.
 
+Lệnh staging ở trên là để chạy thử tại chỗ.
+Staging **sau mỗi lần merge** thì do pipeline dựng lại, xem mục "Pipeline"; gõ tay lệnh trên sau khi merge sẽ đè lên bản pipeline vừa triển khai.
+
 Hai cái bẫy khi triển khai tay.
 
 Sửa `infra/nginx/nginx.conf` rồi chạy lại lệnh trên thì nginx **không** nạp config mới, vì định nghĩa service không đổi nên Compose không dựng lại container.
@@ -130,7 +133,12 @@ Vì vậy stack phải đang chạy trước khi chạy nó.
 npm install
 npm test                                   # mặc định bắn vào staging, http://localhost:8081
 BASE_URL=http://localhost:8080 npm test    # hoặc bắn vào prod
+npm run smoke                              # chỉ các đường sống còn, cùng bộ test
 ```
+
+`npm run smoke` chạy đúng hai file trong `tests/` thay vì cả năm.
+Nó là thứ pipeline dùng để nghiệm thu một lần triển khai staging, nên nó phải nhanh và chỉ gồm những đường mà hỏng là hệ coi như không phục vụ được.
+Không có bộ kiểm thử thứ hai viết riêng cho việc đó.
 
 Kiểm tra kiểu và lint:
 
@@ -151,10 +159,27 @@ Node 24 chạy thẳng TypeScript nên không có bước biên dịch riêng: k
 
 `.github/workflows/ci.yml` chạy trên mỗi pull request và trên mỗi lần `main` nhận commit mới: cài phụ thuộc, kiểm tra kiểu, lint, dựng stack staging rồi chạy bộ kiểm thử qua nginx, sau đó đóng gói image và đẩy lên GHCR với tag là SHA của commit.
 Lần chạy trên `main` không thừa: merge bằng squash sinh ra một commit mới, nên nếu chỉ chạy ở pull request thì commit thật sự nằm trên `main` sẽ là commit duy nhất không có image nào.
-Bước đóng gói nằm riêng ở `.github/workflows/image.yml` dạng `workflow_call`, để #12 và #13 gọi lại chính nó thay vì chép bước build sang chỗ khác.
+Bước đóng gói nằm riêng ở `.github/workflows/image.yml` dạng `workflow_call`, để #13 gọi lại chính nó thay vì chép bước build sang chỗ khác.
 
-Build vì vậy không còn làm tay nữa.
-**Triển khai thì vẫn làm tay** theo `docs/trien-khai-thu-cong.md`, cho tới khi #12 tự động hoá staging và #13 tự động hoá prod.
+Trên `main` có thêm job thứ ba là `trien-khai-staging`: nó kéo image vừa đẩy về, dựng lại staging từ đúng image ấy, rồi chạy `npm run smoke` qua nginx để nghiệm thu.
+Smoke test là tập con của chính bộ kiểm thử, gồm hai file kiểm sẵn sàng của cả ba service và đường tạo link với chuyển hướng; chi tiết ở bước 4 của `docs/trien-khai-thu-cong.md`.
+Smoke test đỏ thì job đỏ, và lần chạy trên `main` mang dấu X.
+
+Build và triển khai staging vì vậy không còn làm tay nữa.
+**Triển khai prod thì vẫn làm tay** theo bước 5 và bước 6 của `docs/trien-khai-thu-cong.md`, cho tới khi #13 tự động hoá nốt.
+
+### Runner tự quản cho staging
+
+Staging là `localhost:8081` trên máy chủ đồ án, đúng môi trường mà Giai đoạn thủ công đã đo.
+Runner của GitHub nằm trên mây và không có đường nào tới đó, nên job `trien-khai-staging` chạy trên một self-hosted runner đăng ký ở chính máy ấy.
+Đây là việc cài một lần, theo `Settings > Actions > Runners > New self-hosted runner` của kho mã; nhãn mặc định `self-hosted` là nhãn mà workflow đang chọn.
+
+Máy đó cần Docker Desktop đang chạy và cần `git`; Node thì workflow tự cài bản 24 nên không cần sẵn.
+Runner không chạy thì lần triển khai xếp hàng chờ chứ không hỏng, và nó chạy tiếp khi runner sống lại.
+
+Kho mã này công khai, mà self-hosted runner trên kho công khai là rủi ro có thật: một pull request từ fork chạy được mã tuỳ ý trên máy thật.
+Chỗ chặn nằm ở `if: github.event_name == 'push'` của job, nghĩa là job chỉ tồn tại với commit đã qua `kiem-tra` và đã được merge, không bao giờ với mã của một pull request.
+Đừng nới điều kiện ấy.
 
 Giai đoạn nào đang chạy thì tra ở mục cuối `docs/nhat-ky-du-an.md`; đừng tra ở đây, vì file này mô tả hệ chứ không theo dõi tiến độ.
 Vì sao Giai đoạn thủ công cố tình không có pipeline: `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md`.
