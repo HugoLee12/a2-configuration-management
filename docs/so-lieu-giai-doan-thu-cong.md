@@ -3,8 +3,8 @@
 File này chốt lại Giai đoạn thủ công thành một bảng số dùng được cho báo cáo A2 và cho phép so sánh ở #22.
 
 Nó **không** phải nguồn sự thật của dữ liệu.
-Mốc giờ thô chỉ nằm ở `docs/nhat-ky-thu-cong.md`; mọi con số dưới đây là số dẫn xuất, tính lại được từ đó bất cứ lúc nào.
-Nếu hai file mâu thuẫn thì `docs/nhat-ky-thu-cong.md` đúng và file này sai.
+Nguồn sự thật của mốc giờ thô là `docs/nhat-ky-thu-cong.md`; mọi con số dưới đây là số dẫn xuất, tính lại được từ đó bất cứ lúc nào.
+File này có trích lại vài mốc thô khi cần chỉ đúng chỗ, nhưng trích chứ không giữ: nếu hai file mâu thuẫn thì `docs/nhat-ky-thu-cong.md` đúng và file này sai.
 
 Chốt ngày 2026-07-29 khi đóng #10.
 Từ đây tới hết đồ án, năm mẫu này là mốc cố định và không được ghi thêm mẫu thủ công nào nữa.
@@ -56,10 +56,10 @@ Muốn có chi phí của một lần triển khai prod đứng một mình thì
 | prod | 3,6 | 1 | 0 | 13 |
 | **Lead time** | **8,6** | **5** | **4** | **16** |
 
-Bảng này thay cho bảng ở mục "2026-07-28 - Xác thực địa chỉ, và một bước phục hồi chưa bao giờ chạy" của `docs/nhat-ky-du-an.md`, mục đã tính cột prod theo hai cách.
+Bảng này thay cho bảng ở mục "2026-07-29 - Số liệu vận hành, và một lỗi mà hai mươi test xanh không thấy" của `docs/nhat-ky-du-an.md`, tức mục của #8, nơi cột prod bị tính theo hai cách.
 Mục đó được giữ nguyên chứ không sửa đè, vì bản thân chỗ lệch là dữ liệu về quy trình.
 
-### Ba chỗ phải trừ hao khi trích
+### Ba mẫu có mốc giờ phải trừ hao
 
 Ba mẫu mang ghi chú riêng trong `docs/nhat-ky-thu-cong.md`, và bảng trên không thể hiện được chúng.
 
@@ -105,14 +105,16 @@ Trung vị không đổi giữa hai cách tính, còn trung bình chênh gần h
 | Số lần triển khai một môi trường | 10 |
 | Số lần triển khai prod | 5 |
 | Cửa sổ đo | `2026-07-28T15:18` tới `2026-07-29T09:18`, đúng 18 giờ 00 |
-| Tần suất | 1 lần lên prod mỗi 3 giờ 36 phút, quy đổi 6,7 lần một ngày |
+| Tần suất | 5 lần lên prod trong 18 giờ, quy đổi 6,7 lần một ngày |
 
-Khoảng cách giữa hai lần lên prod liên tiếp, theo thứ tự: 63, 622, 51, 344 phút.
-Trung vị là 203,5 phút.
+Hai mốc của cửa sổ là thời điểm **sự kiện triển khai** xảy ra, không phải lời khẳng định rằng lần triển khai đó thành công.
+Mốc `2026-07-28T15:18` chính là mốc mà mục dưới chứng minh là sai về mặt kết quả; nó vẫn dùng được ở đây vì tần suất đếm số lần con người ngồi xuống triển khai, không đếm số lần triển khai đúng.
 
-Con số này phải trích kèm cảnh báo, nếu không nó sẽ nói ngược điều cần nói.
+Năm lần triển khai chỉ tạo ra bốn khoảng cách, nên tỷ lệ trên cửa sổ ở trên **không** phải khoảng cách trung bình giữa hai lần.
+Bốn khoảng cách theo thứ tự là 63, 622, 51 và 344 phút, trung bình 270 phút và trung vị 203,5 phút.
 
-Tần suất trên trông cao, nhưng nó không đo năng lực của quy trình.
+Tần suất ở bảng trên phải trích kèm cảnh báo, nếu không nó sẽ nói ngược điều cần nói.
+Nó trông cao, nhưng nó không đo năng lực của quy trình.
 Mẫu số là thời gian đồng hồ của một đợt làm việc dồn, còn hai khoảng cách lớn nhất là 622 phút và 344 phút, tức những lúc không có ai ngồi trước máy.
 Ràng buộc thật của Giai đoạn thủ công là **mỗi lần triển khai đều cần một người có mặt gõ lệnh**, chứ không phải quy trình chỉ chịu được ngần ấy lần một ngày.
 
@@ -122,31 +124,35 @@ So một đợt làm dồn của giai đoạn này với một đợt làm dồn
 ## Kích thước các thay đổi
 
 Cột "Mã và hạ tầng" đếm dòng thêm và dòng xoá ở `services/`, `infra/`, `compose.yaml`, `Dockerfile` và các file `package.json`, tức đúng phần mà một lần triển khai phải build lại.
+Cột "File mã chạm" đếm số file trong đúng tập đó.
+`package-lock.json` cố ý nằm ngoài cả hai cột, vì nó do npm sinh chứ không do người viết, nên đưa vào sẽ đo lẫn kích thước của thay đổi với số dependency bị đụng.
 Hai cột còn lại tách riêng vì chúng không đi vào image.
 
 | Mẫu | Mã và hạ tầng | File mã chạm | Kiểm thử | Tài liệu |
 |---|---|---|---|---|
-| #5 | +108 / -1 | 7 | +118 / -33 | +193 / -12 |
+| #5 | +98 / -1 | 7 | +118 / -33 | +193 / -12 |
 | #6 | +18 / -3 | 1 | +51 / -0 | +2 / -2 |
-| #7 | +95 / -14 | 7 | +52 / -5 | +26 / -7 |
-| #8 | +199 / -19 | 9 | +206 / -2 | +10 / -6 |
+| #7 | +94 / -14 | 7 | +52 / -5 | +26 / -7 |
+| #8 | +156 / -16 | 9 | +206 / -2 | +10 / -6 |
 | #9 | +120 / -12 | 6 | +0 / -0 | +25 / -0 |
 
-Trung vị của cột mã là 108 dòng thêm, trung bình 108, dải từ 18 tới 199.
+Trung vị của cột mã là 98 dòng thêm, trung bình 97,2, dải từ 18 tới 156.
 
 ### Nhận xét về mức độ đồng đều
 
-Bốn trong năm mẫu nằm trong dải 95 tới 199 dòng và chạm từ 6 tới 9 file mã.
+Bốn trong năm mẫu nằm trong dải 94 tới 156 dòng và chạm từ 6 tới 9 file mã.
 Đó là một nhóm đủ đồng đều để gọi là "thay đổi cỡ chuẩn" theo cách `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` dùng từ này.
 
 Điểm quan trọng hơn con số: kích thước thay đổi **không** kéo theo chi phí triển khai.
-#6 nhỏ hơn #8 mười một lần về số dòng mã, nhưng cột staging của cả hai đều là 2 phút.
+#6 nhỏ hơn #8 gần chín lần về số dòng mã, nhưng cột staging của cả hai đều là 2 phút.
 Chi phí của một lần triển khai tay ở đây gần như toàn bộ là chi phí cố định, gồm build image, dựng lại container và chạy bộ kiểm thử, chứ không phải chi phí tỷ lệ với lượng mã.
 Đây là điều làm phép so sánh với Giai đoạn pipeline vững hơn tưởng, vì lệch cỡ giữa hai giai đoạn không tự động làm lệch số đo.
 
-### Ba ngoại lệ phải cảnh báo
+### Ba ngoại lệ về hình dạng thay đổi
 
-**#6 là mẫu nhỏ nhất và lệch hẳn nhóm.**
+Chỉ ngoại lệ đầu là ngoại lệ về **kích thước** theo đúng nghĩa; hai ngoại lệ sau nói về thành phần của thay đổi, và chúng ảnh hưởng tới phép so sánh ở #22 nặng hơn kích thước.
+
+**#6 là mẫu nhỏ nhất và lệch hẳn nhóm, nhỏ hơn cận dưới của bốn mẫu kia hơn năm lần.**
 18 dòng mã trên đúng một file, không chạm hạ tầng.
 Nó vẫn nằm trong tập mẫu vì cột staging của nó bằng bốn mẫu còn lại, tức nó không kéo trung vị đi đâu cả.
 Nhưng nếu #22 cần một cặp thay đổi thật sự so được một một giữa hai giai đoạn thì đừng chọn mẫu này.

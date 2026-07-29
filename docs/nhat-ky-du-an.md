@@ -1298,8 +1298,11 @@ Nó mở đầu bằng một bảng định nghĩa nói rõ mỗi đại lượn
 
 ### Việc thứ nhất: cột prod, và vì sao chọn cách trừ từ staging
 
-Bảng ở mục "2026-07-28 - Xác thực địa chỉ" tính cột prod cho #5 và #6 theo mốc `Bắt đầu`, còn cho #7 và #8 theo mốc `Hoàn tất` của staging.
+Bảng ở mục của #8, tức "2026-07-29 - Số liệu vận hành, và một lỗi mà hai mươi test xanh không thấy", tính cột prod cho #5 và #6 theo mốc `Bắt đầu`, còn cho #7 và #8 theo mốc `Hoàn tất` của staging.
 Với #9 thì hai cách cho ra 3 phút và 1 phút, chênh gấp ba.
+
+Bảng đó từ đây được thay bằng bảng năm mẫu trong `docs/so-lieu-giai-doan-thu-cong.md`, mục "Bảng năm mẫu".
+Nó không bị sửa đè, nên khi báo cáo trích số thì phải trích từ file mới chứ không từ mục nhật ký cũ.
 
 Chỗ này chọn cách trừ từ `Hoàn tất` của staging, vì một lý do kiểm chứng được chứ không phải vì nó nhỏ hơn.
 
@@ -1322,7 +1325,7 @@ Bảng ghi prod của #5 xanh lúc `2026-07-28T15:18`, và mục đính chính t
 Cả hai đều có lý, và không có cách nào chọn một mà không mất cái kia, nên bảng ghi cả hai.
 Bảng chính giữ 14 phút, vì đó là con số duy nhất tính được bằng cùng một luật với bốn mẫu còn lại, và vì luật đo của đồ án định nghĩa `Hoàn tất` là lúc bộ kiểm thử báo xanh chứ không phải lúc hệ thật sự đúng.
 
-Điều đáng kể lại là hệ quả lên hai chỉ số:
+Điều đáng kể lại là hệ quả lên hai chỉ số, trích từ mục "Lead time của #5 có một giá trị thứ hai" trong `docs/so-lieu-giai-doan-thu-cong.md`:
 
 | Cách tính lead time của #5 | Trung bình | Trung vị |
 |---|---|---|
@@ -1403,7 +1406,7 @@ Cảnh báo thứ ba kéo theo một yêu cầu lên Giai đoạn pipeline: ph�
 - Bảng số và toàn bộ công thức: `docs/so-lieu-giai-doan-thu-cong.md`
 - Mốc giờ thô của cả năm mẫu: `docs/nhat-ky-thu-cong.md`, mục "Bảng"
 - Bằng chứng cho lead time 77 phút của #5: cùng file, mục "Đính chính, phát hiện lúc triển khai #6"
-- Bảng cũ tính cột prod theo hai cách, giữ nguyên không sửa đè: mục "2026-07-28 - Xác thực địa chỉ, và một bước phục hồi chưa bao giờ chạy" của file này
+- Bảng cũ tính cột prod theo hai cách, giữ nguyên không sửa đè và đã bị thay: mục "2026-07-29 - Số liệu vận hành, và một lỗi mà hai mươi test xanh không thấy" của file này, tức mục của #8
 
 ### Đang ở đâu sau mục này
 
