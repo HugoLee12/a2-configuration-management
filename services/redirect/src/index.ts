@@ -1,9 +1,20 @@
 import express from "express";
+import { Counter } from "prom-client";
+import { mountMetrics, registry } from "../../shared/src/metrics.ts";
 import { mountProbes, pool } from "../../shared/src/service.ts";
+
+// Xem chú thích cùng chỗ trong services/link về lý do không khai báo ở phần dùng chung.
+const redirectsServed = new Counter({
+  name: "redirects_total",
+  help: "Số lượt chuyển hướng đã phục vụ",
+  registers: [registry],
+});
 
 const app = express();
 
-// Trước `/:code`, nếu không thì hai đường dẫn thăm dò rơi vào route bắt tất cả.
+// Cả hai đều phải trước `/:code`, nếu không thì các đường dẫn nội bộ rơi vào
+// route bắt tất cả.
+mountMetrics(app);
 mountProbes(app);
 
 app.get("/:code", async (req, res) => {
@@ -23,6 +34,8 @@ app.get("/:code", async (req, res) => {
     // là mất sự kiện lần này, chấp nhận được vì số lượt không phải dữ liệu tính tiền.
     console.error(error);
   }
+
+  redirectsServed.inc();
 
   // 302 chứ không 301: trình duyệt cache 301 vĩnh viễn nên lượt truy cập sau sẽ
   // không đi qua service này nữa, làm hỏng việc đếm lượt.
