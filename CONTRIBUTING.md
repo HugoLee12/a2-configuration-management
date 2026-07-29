@@ -37,12 +37,24 @@ Nếu commit được push chính là head của một pull request đang mở, 
 Ngoại lệ này không phá quy ước, vì thay đổi vẫn đi qua một pull request nối về issue; nó chỉ khiến pull request bị merge mà không qua nút Merge trên giao diện, và bỏ mất phần mô tả merge do GitHub sinh.
 Vì vậy rule bảo vệ nhánh nên được hiểu là ràng buộc đường đi của một thay đổi, không phải một cái khoá tuyệt đối lên nhánh.
 
+Từ #11, lối đi này không còn tức thì nữa.
+"Mọi điều kiện của rule" giờ gồm cả check `kiem-tra` nói ở mục dưới, và check ấy phải xanh trên **chính commit** được push chứ không phải trên một commit trước đó của nhánh.
+Nghĩa là vẫn phải đẩy commit lên nhánh của pull request, chờ workflow chạy xong, rồi mới push thẳng vào `main` được; push ngay sau khi commit thì rule từ chối, vì lúc đó check còn đang chạy.
+
 Phần mô tả pull request phải chứa một dòng `Closes #<số-issue>` để GitHub nối pull request với issue và tự đóng issue khi merge.
 Nhờ đó truy được ngược từ một bản phát hành về commit, về pull request, rồi về yêu cầu thay đổi ban đầu.
 
 Pull request merge được mà không cần approval của người khác.
 Đây là lựa chọn có chủ đích: đồ án do một người thực hiện, mà GitHub không cho tự duyệt pull request của chính mình, nên yêu cầu người duyệt sẽ tự khoá tác giả.
-Việc bảo vệ vì vậy nằm ở chỗ bắt buộc pull request, không nằm ở số lượng người duyệt.
+
+Không đòi người duyệt không có nghĩa là không có ai gác.
+Từ #11, rule bảo vệ `main` đòi thêm một status check bắt buộc tên `kiem-tra`, là job kiểm thử của `.github/workflows/ci.yml`; check ấy chưa xanh thì pull request không merge được.
+Rule cũng bật `strict`, nghĩa là nhánh còn phải cập nhật tới ngọn `main` hiện tại.
+Một pull request mở lâu, trong lúc đó `main` nhận commit mới, sẽ chuyển sang `BEHIND` và bị chặn cho tới khi nhánh được cập nhật rồi `kiem-tra` chạy lại và xanh trên commit mới ấy.
+Đây là hành vi đúng của rule chứ không phải hỏng, và là chỗ dễ hiểu nhầm nhất khi gặp lần đầu.
+
+Việc bảo vệ vì vậy nằm ở hai chỗ: bắt buộc pull request, và bắt buộc `kiem-tra` xanh trên đúng commit sắp vào `main`.
+Không chỗ nào trong hai chỗ đó là số lượng người duyệt.
 
 Merge bằng squash, để mỗi issue tương ứng đúng một commit trên `main`.
 

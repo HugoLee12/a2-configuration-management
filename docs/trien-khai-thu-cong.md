@@ -2,8 +2,18 @@
 
 Tài liệu này mô tả cách đưa một thay đổi đã merge vào `main` lên hai môi trường của Hệ thống demo, hoàn toàn bằng tay, và cách bấm giờ trong lúc làm.
 
-Nó phục vụ Giai đoạn thủ công.
-Số đo thu được ghi vào `docs/nhat-ky-thu-cong.md` và là vế "trước khi có pipeline" của Luận điểm.
+Từ #11, hai nửa ấy không còn cùng trạng thái, nên đọc phần nào là tuỳ việc đang làm.
+
+**Các bước triển khai còn hiệu lực.**
+Triển khai vẫn làm tay cho tới khi #12 tự động hoá staging và #13 tự động hoá prod.
+"Bảng lệnh", "Chuẩn bị", "Các bước", "Khi có sự cố" và "Nếu prod hỏng" vì vậy vẫn là quy trình đang dùng.
+
+**Kỷ luật bấm giờ thì đã đóng.**
+`docs/nhat-ky-thu-cong.md` đóng sổ ngày 2026-07-29 khi #10 xong và không nhận thêm dòng nào, nên không còn mốc nào để lấy và không còn cột nào để điền.
+Mọi chỗ nói tới việc bấm giờ hay điền nhật ký trong tài liệu này đều được đánh dấu **(đã đóng)** và giữ nguyên tại chỗ: chúng là bản ghi cách bộ dữ liệu của Giai đoạn thủ công được tạo ra, thứ mà báo cáo cần để nói về giới hạn của phép đo.
+Đọc chúng như bản ghi, đừng làm theo.
+
+Số đo thu được nằm ở `docs/nhat-ky-thu-cong.md`, số dẫn xuất ở `docs/so-lieu-giai-doan-thu-cong.md`, và cả hai là vế "trước khi có pipeline" của Luận điểm.
 
 Cách chạy hệ và hình dạng của hệ nằm ở `README.md`; ở đây chỉ nói thứ tự các bước và kỷ luật ghi giờ.
 
@@ -19,17 +29,20 @@ Bước 1 có một lệnh cho biết lần merge này đụng file nào; theo �
 - đụng `infra/postgres/init.sql` thì mở hai dòng `down -v`, chúng nằm **trước** lệnh `up`
 - đụng `infra/nginx/nginx.conf` thì mở hai dòng `restart nginx`, chúng nằm **sau** lệnh `up`
 
+Bốn dòng còn lại bị chú thích vì lý do khác hẳn: ba lệnh lấy giờ và một lệnh `gh pr view` chỉ phục vụ việc điền `docs/nhat-ky-thu-cong.md`, mà file đó đã đóng sổ.
+Chúng thuộc phần **(đã đóng)** và không bao giờ được mở lại; chúng nằm đó để thấy khối lệnh này từng có hình dạng nào lúc năm mẫu đo được tạo ra.
+
 Chép cả khối mà không mở dòng nào là đúng cho thay đổi chỉ đụng mã service, và sai cho hai trường hợp trên.
 Bỏ sót thì bước 4 hoặc bước 6 đỏ; đã xảy ra một lần ở lần triển khai của #5, xem mục "#5 prod" trong `docs/nhat-ky-thu-cong.md`.
 
 ```powershell
-(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Bắt đầu, chép lại
+# (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm') #   đã đóng: mốc Bắt đầu
 
 git checkout main                                           # bước 1
 git pull
-git log -1 --format='%h %s'                                 #   -> cột Commit
+git log -1 --format='%h %s'                                 #   xác nhận đúng commit vừa merge
 git --no-pager show --stat HEAD                             #   đụng init.sql hay nginx.conf?
-gh pr view <số-pr> --json mergedAt                          #   -> cột Merge
+# gh pr view <số-pr> --json mergedAt                        #   đã đóng: cột Merge
 
 npm run typecheck                                           # bước 2
 
@@ -39,7 +52,7 @@ docker compose --env-file env/staging.env up -d --build     # bước 3
 docker compose --env-file env/staging.env ps                #   phải thấy 5 dòng Up
 npm test                                                    # bước 4, phải thấy pass 20
 
-(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của staging
+# (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm') #   đã đóng: Hoàn tất của staging
 
 # docker compose --env-file env/prod.env down -v            #   chỉ khi đụng init.sql
 docker compose --env-file env/prod.env up -d --build        # bước 5
@@ -48,14 +61,14 @@ docker compose --env-file env/prod.env ps                   #   phải thấy 5 
 $env:BASE_URL = 'http://localhost:8080'; npm test           # bước 6, phải thấy pass 20
 $env:BASE_URL = $null
 
-(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm')   # mốc Hoàn tất của prod, dừng đồng hồ
+# (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm') #   đã đóng: Hoàn tất của prod
 ```
 
-Bất kỳ bước nào không cho ra kết quả như ghi ở trên thì dừng lại, xem mục "Khi có sự cố"; đồng hồ vẫn chạy.
+Bất kỳ bước nào không cho ra kết quả như ghi ở trên thì dừng lại, xem mục "Khi có sự cố"; ở Giai đoạn thủ công thì đồng hồ vẫn chạy trong lúc đó.
 
 ## Vì sao làm tay, và làm tay tới mức nào
 
-Giai đoạn này **cố ý không có pipeline**, theo `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md`.
+Giai đoạn thủ công **cố ý không có pipeline**, theo `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md`.
 Đây là quyết định có chủ đích, không phải việc còn nợ.
 Toàn bộ giá trị của Giai đoạn thủ công nằm ở chỗ nó đo được chi phí thật của con người khi chưa có gì tự động, để về sau so với Giai đoạn pipeline mà chỉ khác đúng một biến.
 
@@ -70,7 +83,20 @@ Ranh giới cụ thể:
 
 Các lệnh `npm test` và `npm run typecheck` đã có sẵn từ #3 thì vẫn dùng, vì chúng là một bước chứ không phải một chuỗi bước được gộp.
 
-## Quy tắc bấm giờ
+Ranh giới trên là luật **của Giai đoạn thủ công**, không phải luật đang có hiệu lực.
+Nó chi phối đúng khoảng thời gian năm mẫu đo được tạo ra, và khoảng đó đã khép lại ở #10.
+Vì vậy `.github/workflows/ci.yml` dựng ở #11 không mâu thuẫn với dòng "không được dùng GitHub Actions" ở trên: cấm CI là điều kiện của thí nghiệm, và thí nghiệm ấy đã chạy xong phần của nó.
+
+Cái còn hiệu lực là các bước ở dưới vẫn gõ tay cho tới khi #12 và #13 tự động hoá chúng.
+Lý do bây giờ chỉ còn là chưa có ai làm thay, không còn là kỷ luật đo lường.
+
+## Quy tắc bấm giờ (đã đóng)
+
+Mục này mô tả kỷ luật đã áp dụng cho năm mẫu đo của Giai đoạn thủ công, không phải việc phải làm bây giờ.
+`docs/nhat-ky-thu-cong.md` đóng sổ ở #10, nên không còn dòng nào để ghi và không còn đồng hồ nào để bấm.
+Giữ nguyên vì báo cáo chỉ nói được bộ dữ liệu ấy đo cái gì và bỏ sót cái gì khi biết nó được tạo ra theo luật nào.
+
+Nguyên văn luật cũ, ở thì hiện tại như lúc nó còn hiệu lực:
 
 Đọc kỹ mục này trước lần triển khai đầu tiên, vì số đo sai không sửa lại được.
 
@@ -118,7 +144,7 @@ Hai việc này nằm **ngoài** đồng hồ, vì chúng không lặp lại the
 Sáu bước, theo đúng thứ tự này mỗi lần.
 Mỗi bước ghi kèm thứ phải nhìn thấy thì mới được đi tiếp.
 
-### Bước 1: lấy thay đổi về và ghi mốc merge
+### Bước 1: lấy thay đổi về
 
 ```sh
 git checkout main
@@ -126,7 +152,8 @@ git pull
 git log -1 --format='%h %s'
 ```
 
-Ghi lại SHA ngắn vừa hiện ra vào cột `Commit`.
+SHA ngắn vừa hiện ra xác nhận đây đúng là commit vừa merge.
+**(Đã đóng)** Nó cũng từng được ghi vào cột `Commit` của `docs/nhat-ky-thu-cong.md`.
 
 Rồi xem lần merge này đụng những file nào:
 
@@ -137,13 +164,13 @@ git --no-pager show --stat HEAD
 Danh sách đó quyết định hai bước có điều kiện ở bước 3 và bước 5, nên phải biết ngay từ đây chứ không phải lúc đã đứng trước lệnh `up`.
 Thấy `infra/postgres/init.sql` thì bước 3 và bước 5 có thêm `down -v`, thấy `infra/nginx/nginx.conf` thì có thêm `restart nginx`.
 
-Mốc merge lấy từ GitHub, không lấy từ `git log`, vì thời điểm tác giả commit không phải thời điểm thay đổi vào `main`:
+**(Đã đóng)** Mốc merge được lấy từ GitHub chứ không từ `git log`, vì thời điểm tác giả commit không phải thời điểm thay đổi vào `main`:
 
 ```sh
 gh pr view <số-pr> --json mergedAt
 ```
 
-Ghi giá trị đó vào cột `Merge`, cắt bớt phần giây.
+Giá trị đó được ghi vào cột `Merge`, cắt bớt phần giây.
 
 ### Bước 2: kiểm tra kiểu
 
@@ -197,14 +224,12 @@ npm test
 Bộ kiểm thử mặc định bắn vào `http://localhost:8081`.
 Phải xanh toàn bộ thì mới được đụng tới prod.
 
-Xanh thì lấy giờ ngay và ghi vào cột `Hoàn tất` của **dòng staging**.
+**(Đã đóng)** Xanh thì lấy giờ ngay và ghi vào cột `Hoàn tất` của **dòng staging**.
 Đây là mốc giữa, dễ quên nhất trong cả quy trình, vì cảm giác lúc đó là mới làm được nửa việc chứ chưa xong cái gì.
 Bỏ mốc này thì về sau không tách được thời gian triển khai staging khỏi thời gian triển khai prod, mà #10 cần cả hai để nói được rằng phần lớn thời gian rơi vào đâu.
-
 Đồng hồ **không** dừng ở đây, nó chạy tiếp sang bước 5.
 
 Nếu đỏ, xem mục sự cố ở dưới.
-Đồng hồ vẫn chạy.
 
 ### Bước 5: triển khai prod
 
@@ -240,9 +265,12 @@ Dòng thứ hai của bản PowerShell là bắt buộc, không phải cho gọn
 Bash đặt biến cho đúng một lệnh rồi thôi, còn PowerShell giữ biến cho tới hết phiên terminal.
 Quên xoá thì lần triển khai sau, bước 4 tưởng là đang kiểm thử staging nhưng thật ra vẫn bắn vào prod, và nó sẽ xanh nên không có gì báo cho biết.
 
-Xanh toàn bộ thì **dừng đồng hồ** và ghi vào cột `Hoàn tất`.
+Xanh toàn bộ thì xong lần triển khai.
+**(Đã đóng)** Đây cũng là chỗ **dừng đồng hồ** và ghi vào cột `Hoàn tất`.
 
-### Sau khi dừng đồng hồ
+### Sau khi dừng đồng hồ (đã đóng)
+
+Cả mục này thuộc phần đã đóng: không còn nhật ký nào để điền sau khi bước 6 xanh.
 
 Điền nốt các cột còn thiếu của cả hai dòng trong `docs/nhat-ky-thu-cong.md`, rồi commit file nhật ký.
 
@@ -255,10 +283,10 @@ Lý do là ở Giai đoạn pipeline sẽ không có công việc tương ứng,
 Sự cố không phải chuyện bất thường cần giấu đi, nó là dữ liệu.
 Change failure rate của Giai đoạn thủ công được tính từ chính cột này.
 
-Quy tắc: **đồng hồ không dừng, và mô tả sự cố được ghi ngay ở cột `Sự cố`**.
+**(Đã đóng)** Quy tắc lúc đó: **đồng hồ không dừng, và mô tả sự cố được ghi ngay ở cột `Sự cố`**.
 Nếu mô tả dài hơn một dòng bảng thì ghi vắn tắt ở cột đó và viết đầy đủ ở mục ghi chú cuối file nhật ký.
 
-Hai sự cố đã gặp ở #3 và nhiều khả năng gặp lại:
+Hai sự cố đã gặp ở #3 và nhiều khả năng gặp lại, phần này vẫn còn hiệu lực:
 
 **nginx trả 502 sau khi dựng lại một service.**
 Docker cấp lại địa chỉ IP mỗi lần container được dựng lại.
@@ -274,4 +302,4 @@ Phân biệt hai trường hợp, vì chúng cho hai con số khác nhau.
 Giai đoạn này chưa có blue-green và chưa có rollback tự động; #13 mới làm việc đó.
 Cách quay về bản cũ là `git checkout` commit trước rồi chạy lại bước 5 và 6.
 
-Thời điểm prod bắt đầu hỏng và thời điểm nó chạy lại được ghi vào cột `Sự cố`, vì đó là dữ liệu để tính MTTR của Giai đoạn thủ công.
+**(Đã đóng)** Thời điểm prod bắt đầu hỏng và thời điểm nó chạy lại được ghi vào cột `Sự cố`, vì đó là dữ liệu để tính MTTR của Giai đoạn thủ công.
