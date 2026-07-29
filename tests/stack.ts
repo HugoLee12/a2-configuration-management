@@ -5,6 +5,13 @@ import { setTimeout as sleep } from "node:timers/promises";
 export const BASE_URL = process.env.BASE_URL ?? "http://localhost:8081";
 export const READY_TIMEOUT_MS = 60_000;
 
+// Nói ra địa chỉ đang bị bắn vào, trước khi test đầu tiên chạy.
+// Bước 4 và bước 6 của `docs/trien-khai-thu-cong.md` là cùng một lệnh `npm test`
+// và chỉ khác nhau ở biến BASE_URL, nên nếu không in ra thì hai lần chạy để lại
+// đầu ra giống hệt nhau và không còn cách nào biết lần nào bắn vào đâu.
+// Đặt ở đây, lúc nạp module, để dòng này có mặt cả khi bộ kiểm thử đỏ.
+console.log(`[kiểm thử] địa chỉ đang kiểm thử: ${BASE_URL}`);
+
 export function createLink(body: unknown): Promise<Response> {
   return fetch(`${BASE_URL}/api/v1/links`, {
     method: "POST",
