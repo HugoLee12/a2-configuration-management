@@ -1109,3 +1109,157 @@ Cách này chạy đúng và đã qua cả `npm ci` trong Docker qua hai mẫu t
 
 Sau #10 là hết Giai đoạn thủ công.
 Từ #11 trở đi pipeline mới được dựng, và mọi con số của bốn mẫu hiện có sẽ trở thành mốc so sánh cố định, không sửa lại được nữa.
+
+## 2026-07-29 - Log có cấu trúc, và một phần mà bộ kiểm thử không thể chạm tới
+
+**Ticket**: #9 (B5), #64
+**Pull request**: #62, #63
+**Phục vụ**: thay đổi cỡ chuẩn cuối của Giai đoạn thủ công, tức mẫu số liệu thứ năm; và là dẫn chứng chính cho mục bàn về giới hạn của cổng gác tự động trong báo cáo
+
+### Ticket đòi cái gì
+
+#9 đòi toàn bộ log của ba service ghi ở dạng có cấu trúc, mỗi bản ghi nói được service nào, thời điểm nào, request nào, kết quả ra sao và mất bao lâu.
+Thêm hai ràng buộc: trích được số liệu từ log bằng một lệnh, và không ghi địa chỉ đích đầy đủ của người dùng ở mức thông tin, chỉ ghi mã ngắn.
+
+Đây là nguồn dữ liệu thứ hai bên cạnh `/metrics` cho ô Demo và đo lường của Rubric.
+Hai nguồn không thay thế nhau: `/metrics` cho số đã cộng dồn sẵn, còn log giữ từng sự kiện, nên nó trả lời được câu hỏi chưa nghĩ ra lúc dựng chỉ số.
+Chỗ này sẽ có ích cụ thể ở #21, nơi cần biết thời điểm hệ bắt đầu hỏng và thời điểm nó phục hồi; một counter không nói được thời điểm.
+
+### Một quyết định phải chốt trước khi viết dòng mã nào
+
+Mục trước để lại một câu hỏi mở: `services/shared/` sau #8 đã có hai file và #9 sẽ làm nó thành ba, mà nó vẫn được import theo đường dẫn tương đối.
+
+Khi mở ra xem thì hiện trạng không phải như câu hỏi đó mô tả.
+`package.json` ở gốc **đã** khai báo `workspaces: ["services/*"]` từ trước, nhưng `services/shared/` không có `package.json` nên npm bỏ qua nó.
+Nghĩa là thư mục này không phải "chưa được dựng thành workspace", nó đang **cố ý đứng ngoài** một workspace đã có, và lý do nằm sẵn trong chú thích đầu `services/shared/src/service.ts`: Node không bóc kiểu cho file TypeScript nằm dưới `node_modules`, mà workspace thì phân giải qua đó.
+
+Quyết định là giữ nguyên.
+Lý do kỹ thuật ở trên vẫn đúng, và cách hiện tại đã qua `npm ci` trong Docker suốt bốn mẫu triển khai.
+
+Nhưng lý do quyết định là lý do thứ ba, và nó không thuộc về kỹ thuật: **#9 là thay đổi cỡ chuẩn cuối của Giai đoạn thủ công.**
+Đổi cấu trúc build ở đúng mẫu đo cuối cùng sẽ làm thời gian build của mẫu thứ năm không so sánh được với bốn mẫu trước, mà cột staging đứng yên ở 2 phút suốt bốn mẫu chính là con số ổn định nhất đang có và là mốc so sánh chính ở #22.
+Một cải thiện cấu trúc đáng giá vào lúc khác trở thành một biến nhiễu vào lúc này.
+
+Đây là loại đánh đổi mà đề tài cần ghi lại, vì nó cho thấy quyết định kỹ thuật trong một dự án có đo lường không chỉ bị chi phối bởi chất lượng mã.
+
+### Đã thay đổi những gì
+
+Phần dùng chung nằm ở `services/shared/src/log.ts`, cạnh `service.ts` và `metrics.ts` mà #7 và #8 đã tạo.
+Không thêm dependency nào: `console.log(JSON.stringify(...))` đủ cho cả năm tiêu chí nghiệm thu, còn một thư viện log sẽ thêm hai gói vào cả ba service cho một bản ghi chỉ có sáu trường.
+
+Ba quyết định đáng ghi.
+
+**Tên service đi qua biến môi trường `SERVICE_NAME`, không qua tham số hàm.**
+Ba service dùng chung một image nên tên không suy ra được từ mã, mà chính phần dùng chung trong `service.ts` cũng cần tới nó khi ghi lỗi thăm dò; truyền bằng tham số thì phải lan nó qua cả `mountProbes`.
+Tên nằm trong từng bản ghi chứ không chỉ ở prefix của `docker compose logs`, vì prefix đó biến mất ngay khi log được gom về một chỗ.
+
+**Error handler tự trả response thay vì gọi `next(err)`.**
+Error handler mặc định của express in `err.stack` thô ra stderr, tức là để lại đúng một loại bản ghi không đọc được bằng máy, trong khi tiêu chí đầu tiên của #9 đòi **toàn bộ** log có cấu trúc.
+Đổi lại là một thay đổi hành vi thật: thân của các response lỗi chưa bắt được chuyển từ HTML sang JSON.
+Điều đáng chú ý ở đây là một yêu cầu về quan sát đã ép một thay đổi lên hình dạng của API, chứ không dừng ở tầng ghi log.
+
+**Thứ tự đăng ký lặp lại đúng bài học của #8.**
+Phần ghi log phải đứng trước `express.json()` ở service `link`, vì `next(err)` của body-parser bỏ qua mọi middleware đăng ký sau nó, nên đặt sai thì các mã 400 và 413 biến mất khỏi log y như chúng từng biến mất khỏi số đếm.
+Nó cũng phải đứng trước phần đo, vì `mountMetrics` đăng ký cả route `/metrics`, nên gọi sau thì chính request scrape không được ghi.
+
+### Chuyện đáng kể lại: cổng gác không phải không thấy, mà không có đường để nhìn
+
+Mục trước kết luận rằng cổng gác tự động chỉ bắt được thứ đã có ai đó nghĩ ra cách kiểm.
+Mục này đẩy nhận định đó sang một bậc khác về chất, và bậc đó mới là cái đáng đưa vào báo cáo.
+
+Bộ kiểm thử của đồ án là hộp đen: nó chỉ gửi HTTP vào nginx, không import mã service và không nói chuyện với Postgres.
+Ràng buộc này là tiêu chí nghiệm thu của #3, và nó có lý do tốt: đó là cách duy nhất bắt được lỗi nằm ở chỗ ghép nối giữa các thành phần chứ không nằm trong thành phần nào.
+
+Nhưng log không đi ra qua HTTP.
+Vì vậy không một test nào trong bộ kiểm thử có thể quan sát được thứ mà #9 vừa xây, và con số `pass 20` không đổi một đơn vị nào sau khi #9 xong.
+
+Khác biệt so với #8 nằm ở chỗ đó.
+Ở #8, lỗi thoát ra vì mọi test đang có đều gửi JSON hợp lệ; viết thêm một test là bắt được, và test đó đã được viết.
+Ở #9 thì không có test nào để viết cả, trừ khi phá bỏ ràng buộc hộp đen, mà ràng buộc ấy chính là thứ đang bảo vệ phần còn lại của hệ.
+
+Toàn bộ bốn tiêu chí nghiệm thu kỹ thuật của #9 vì vậy được nghiệm thu bằng tay, trên một stack dựng riêng, bằng những lệnh không nằm trong `npm test` và sẽ không bao giờ nằm trong đó.
+
+Điều này chặn một cách đọc sai thứ hai, khác với cách đọc sai mà mục trước đã chặn.
+Mục trước chống lại kết luận "tự động hoá thay được việc con người xem xét".
+Mục này chống lại một kết luận tinh vi hơn: rằng cứ đầu tư đủ vào bộ kiểm thử thì sẽ tới lúc nó phủ hết.
+Nó không phủ hết được, vì **chọn ranh giới kiểm thử là chọn luôn tập lỗi có thể bắt**, và mọi ranh giới đều để lại một phần nằm ngoài tầm nhìn.
+
+Sang Giai đoạn pipeline, hai mươi test đó sẽ chạy ở mọi lần push, nhanh hơn, rẻ hơn, không quên lần nào.
+Số lượng thứ chúng không nhìn thấy vẫn y nguyên.
+Đó là lý do Chương 25 đặt review cạnh change management thay vì coi công cụ thay được cả hai.
+
+### Đã kiểm chứng thế nào
+
+Vẫn theo nếp từ #5 trở đi: việc kiểm chứng khi phát triển không được đụng vào chính môi trường sẽ được đo.
+Stack thứ ba dựng riêng, project `a2-dev`, cổng 8099, file env nằm ngoài kho mã; xong việc thì `down -v` và xoá image, xác nhận bằng cách liệt kê lại container, volume và image chứ không bằng việc lệnh chạy xong không báo lỗi.
+
+Vì bộ kiểm thử không với tới được phần này, bằng chứng phải dựng bằng tay và được ghi lại thành từng phép kiểm rời:
+
+- 86 trên 86 dòng log phân giải được thành JSON, tức không còn bản ghi nào lọt ra ngoài dạng có cấu trúc
+- địa chỉ đích không xuất hiện trong bất kỳ dòng nào, kiểm bằng cách tạo link tới một địa chỉ mang chuỗi nhận dạng rồi tìm chuỗi đó trong log của cả ba service
+- request có body hỏng để lại đủ hai bản ghi, một `error` và một `info` mang mã 400, tức bài học thứ tự middleware của #8 không tái diễn
+- nhánh lỗi của `/readyz` kiểm bằng cách `pause` Postgres thật, ghi ra bản ghi `level: "error"` đúng dạng, và stack lỗi nằm gọn một dòng nhờ `JSON.stringify` escape ký tự xuống dòng
+- lệnh trích số liệu ghi trong `README.md` chạy thật và trả về bảng đếm request theo mã trạng thái
+
+Lệnh đó viết bằng PowerShell với `ConvertFrom-Json` chứ không bằng `jq`, vì máy làm đồ án không có `jq`, và một tiêu chí nghiệm thu chỉ nghiệm thu được bằng công cụ không có sẵn thì không phải một tiêu chí.
+
+Hai mươi test cũ vẫn xanh ở cả hai môi trường, và đó là toàn bộ những gì chúng nói được về #9.
+
+### Số liệu
+
+| Mẫu | staging | Sự cố |
+|---|---|---|
+| #5 | 2 phút | phát hành thất bại |
+| #6 | 2 phút | phát hành thất bại |
+| #7 | 2 phút | không |
+| #8 | 2 phút | không |
+| #9 | 2 phút | không |
+
+Ba mẫu liên tiếp không có lần phát hành thất bại nào.
+Change failure rate của Giai đoạn thủ công đi từ 2/4 xuống 2/5.
+
+Cột prod cố ý vắng mặt khỏi bảng trên, vì khi đối chiếu để ghi mẫu thứ năm thì lộ ra rằng bảng ở mục trước tính cột đó theo hai cách khác nhau:
+
+| Mẫu | Bảng của mục trước ghi | Hoàn tất prod trừ Bắt đầu | Hoàn tất prod trừ Hoàn tất staging |
+|---|---|---|---|
+| #5 | 5 phút | **5** | 3 |
+| #6 | 15 phút | **15** | 13 |
+| #7 | 1 phút | 3 | **1** |
+| #8 | 0 phút | 2 | **0** |
+
+Hai mẫu đầu tính từ mốc `Bắt đầu`, hai mẫu sau tính từ mốc `Hoàn tất` của staging.
+Ghi chú "#8 prod" trong `docs/nhat-ky-thu-cong.md` phát biểu rõ ý định là cách thứ hai, nên hai mẫu đầu là chỗ lệch.
+Với #9 thì con số ra 3 phút hay 1 phút tuỳ định nghĩa, tức chênh gấp ba.
+
+Chỗ lệch này **không** được sửa ở đây, vì hai lý do.
+Mục nhật ký cũ là bản ghi của một thời điểm, sửa lại nó thì mất dấu việc chỗ lệch từng tồn tại.
+Và việc thống nhất định nghĩa một chỉ số thuộc đúng phạm vi của #10, ticket có tên là đóng Giai đoạn thủ công và tổng hợp số liệu mốc.
+
+Điều quan trọng là bảng trong `docs/nhat-ky-thu-cong.md` không bị ảnh hưởng: nó cố ý chỉ chứa mốc giờ thô và không có cột nào tính sẵn, nên năm mẫu đo vẫn dựng lại được theo bất kỳ định nghĩa nào #10 chọn.
+Đây là lần đầu quyết định thiết kế đó của #5 trả cổ tức.
+
+Dòng staging của #9 có một ghi chú riêng: bước 3 kéo lại hai image nền, `postgres:17-alpine` và `nginx:1.29-alpine`, mỗi cái hơn 11 giây và chạy song song.
+Bốn mẫu trước không có phần này.
+Hai khoảng đó nằm trong đồng hồ theo đúng quy tắc không dừng đồng hồ giữa chừng, nên con số 2 phút của mẫu này "đắt" hơn con số 2 phút của bốn mẫu trước, dù chúng bằng nhau trên giấy.
+
+### Dẫn chứng
+
+- Quyết định về `services/shared/` và ba quyết định thiết kế: pull request #62, và thân commit `805a55c`
+- Phần dùng chung: `services/shared/src/log.ts`
+- Hình dạng bản ghi, ràng buộc quyền riêng tư, và lệnh trích số liệu: mục "Log" trong `README.md`
+- Số đo và ghi chú về hai image nền: pull request #63, `docs/nhat-ky-thu-cong.md`, mục "Ghi chú khác"
+
+### Đang ở đâu sau mục này
+
+Nhật ký thủ công có mười dòng trên năm mẫu, và hai lần phát hành thất bại, cả hai vẫn thuộc về hai mẫu đầu.
+Ba mẫu gần nhất đều sạch, nên hình dạng đã rõ và không đổi so với mục trước: quy trình tay này không hay hỏng, nó chỉ đúng khi người thao tác không mệt.
+
+**Giai đoạn thủ công đã hết thay đổi cỡ chuẩn.**
+#9 là cái cuối cùng, và năm mẫu đo đã đủ để #22 làm phép so sánh.
+
+Còn đúng **#10** (B6, đóng Giai đoạn thủ công và tổng hợp số liệu mốc), và nó đã hết blocker.
+#10 phải giải một việc mà mục này cố ý để lại: chốt định nghĩa của cột prod, rồi tính lại cả năm mẫu theo đúng một cách.
+Cho tới khi việc đó xong thì mọi con số về chi phí triển khai prod của Giai đoạn thủ công đều chưa dùng được để so sánh.
+
+Sau #10 là hết giai đoạn.
+Từ #11 trở đi pipeline mới được dựng, và mọi con số của năm mẫu hiện có sẽ trở thành mốc so sánh cố định, không sửa lại được nữa.
