@@ -3,6 +3,7 @@
 // vì Node không bóc kiểu cho file TypeScript nằm dưới node_modules.
 import type { Express } from "express";
 import { Pool } from "pg";
+import { logError } from "./log.ts";
 
 const PROBE_TIMEOUT_MS = 2000;
 
@@ -57,7 +58,7 @@ export function mountProbes(app: Express): void {
       await probePool.query("select 1");
       res.json({ status: "sẵn sàng" });
     } catch (error) {
-      console.error(error);
+      logError("thăm dò sẵn sàng thất bại", error);
       res.status(503).json({ status: "chưa sẵn sàng" });
     }
   });

@@ -1,5 +1,6 @@
 import express from "express";
 import { Counter } from "prom-client";
+import { logError, mountErrorLogging, mountLogging } from "../../shared/src/log.ts";
 import { mountMetrics, registry } from "../../shared/src/metrics.ts";
 import { mountProbes, pool } from "../../shared/src/service.ts";
 
@@ -12,8 +13,10 @@ const redirectsServed = new Counter({
 
 const app = express();
 
-// Cả hai đều phải trước `/:code`, nếu không thì các đường dẫn nội bộ rơi vào
-// route bắt tất cả.
+// Cả ba đều phải trước `/:code`, nếu không thì các đường dẫn nội bộ rơi vào
+// route bắt tất cả. Log đứng trước metrics vì `mountMetrics` đăng ký cả route
+// `/metrics`.
+mountLogging(app);
 mountMetrics(app);
 mountProbes(app);
 
@@ -32,7 +35,7 @@ app.get("/:code", async (req, res) => {
   } catch (error) {
     // Thống kê là nhánh phụ, hỏng thì không được kéo theo chuyển hướng. Đổi lại
     // là mất sự kiện lần này, chấp nhận được vì số lượt không phải dữ liệu tính tiền.
-    console.error(error);
+    logError("không ghi được lượt truy cập", error);
   }
 
   redirectsServed.inc();
@@ -41,5 +44,8 @@ app.get("/:code", async (req, res) => {
   // không đi qua service này nữa, làm hỏng việc đếm lượt.
   res.redirect(302, link.url);
 });
+
+// Sau mọi route, xem chú thích ở mountErrorLogging.
+mountErrorLogging(app);
 
 app.listen(3000);
