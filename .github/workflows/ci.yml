@@ -5,6 +5,10 @@ name: CI
 
 on:
   pull_request:
+  # Merge bằng squash sinh ra một commit mới trên `main`, không phải commit head
+  # của pull request. Không chạy lại ở đây thì commit thật sự nằm trên `main` là
+  # commit duy nhất không có image nào, mà đó lại đúng là commit #12 phải triển
+  # khai. Đổi lại, mỗi thay đổi để lại hai lần chạy; #67 phải nói rõ lần nào tính.
   push:
     branches: [main]
 

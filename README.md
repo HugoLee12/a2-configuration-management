@@ -149,7 +149,8 @@ Node 24 chạy thẳng TypeScript nên không có bước biên dịch riêng: k
 
 ## Pipeline
 
-Mỗi pull request chạy `.github/workflows/ci.yml`: cài phụ thuộc, kiểm tra kiểu, lint, dựng stack staging rồi chạy bộ kiểm thử qua nginx, sau đó đóng gói image và đẩy lên GHCR với tag là SHA của commit.
+`.github/workflows/ci.yml` chạy trên mỗi pull request và trên mỗi lần `main` nhận commit mới: cài phụ thuộc, kiểm tra kiểu, lint, dựng stack staging rồi chạy bộ kiểm thử qua nginx, sau đó đóng gói image và đẩy lên GHCR với tag là SHA của commit.
+Lần chạy trên `main` không thừa: merge bằng squash sinh ra một commit mới, nên nếu chỉ chạy ở pull request thì commit thật sự nằm trên `main` sẽ là commit duy nhất không có image nào.
 Bước đóng gói nằm riêng ở `.github/workflows/image.yml` dạng `workflow_call`, để #12 và #13 gọi lại chính nó thay vì chép bước build sang chỗ khác.
 
 Build vì vậy không còn làm tay nữa.

@@ -24,9 +24,16 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image: ${{ steps.day.outputs.image }}
+      image: ${{ steps.dung-va-day.outputs.image }}
     steps:
+      # Phải chỉ đích danh ref, không được để mặc định. Trên pull request thì
+      # actions/checkout lấy refs/pull/N/merge, tức commit merge tạm mà GitHub
+      # dựng ra; image sẽ mang nội dung của commit đó nhưng lại đeo tag là SHA
+      # của commit thật. Tag nói một đằng, bytes một nẻo, và mắt xích truy vết
+      # mà #22 cần thì đứt đúng ở chỗ không ai nghĩ là nó đứt.
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag }}
 
       - name: Đăng nhập GHCR
         env:
@@ -38,7 +45,7 @@ jobs:
       # Giá trị của biểu thức đi qua env chứ không nội suy thẳng vào thân script:
       # `tag` do phía gọi truyền vào nên nó là đầu vào không tin được.
       - name: Dựng và đẩy image
-        id: day
+        id: dung-va-day
         env:
           KHO: ${{ github.repository }}
           TAG: ${{ inputs.tag }}
