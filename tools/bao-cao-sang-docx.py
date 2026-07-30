@@ -18,9 +18,11 @@ Số trang thật chỉ đếm được bằng cách mở trong Word. Con số s
 ước, tính từ một mô hình đếm dòng, nên nó dùng để biết cần siết hay nới chứ
 không dùng để nghiệm thu.
 
-Nếu số trang lệch khỏi khoảng 12 tới 15 thì đổi **một** giá trị trong khối NÚM
-ĐIỀU CHỈNH dưới đây rồi chạy lại; đừng cắt chữ trong báo cáo để chạy theo số
-trang. Nới ra: GIAN_DONG 1,0 -> 1,15. Siết vào: CO_CHU 12 -> 11,5 hoặc LE 2,5 -> 2,2.
+Ràng buộc thật là **ít nhất 12 trang**; khoảng 12 tới 15 của đề cương là mức tối
+thiểu chứ không phải trần, nên vượt 15 không phải chỗ phải sửa. Chỉ khi số trang
+tụt dưới 12 thì nới **một** giá trị trong khối NÚM ĐIỀU CHỈNH dưới đây rồi chạy
+lại, ví dụ GIAN_DONG 1,0 -> 1,15; đừng cắt chữ trong báo cáo để chạy theo số
+trang, và đừng siết một báo cáo đã đạt.
 """
 
 import re

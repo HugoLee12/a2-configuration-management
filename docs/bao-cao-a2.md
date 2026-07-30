@@ -161,6 +161,9 @@ Yêu cầu thứ ba là một lần build phải đủ nhanh để không ai mu�
 Một lần build được định nghĩa bằng đúng một `Dockerfile`, và nó cố ý không có bước biên dịch ứng dụng nào.
 Thứ tự các lớp là một lựa chọn về chi phí: manifest được chép trước, mã nguồn chép sau, để sửa mã không phải cài lại dependency.
 Phụ thuộc được ghim bằng `package-lock.json` và cài bằng `npm ci --omit=dev`, còn ba image nền đều ghim tới phiên bản nhỏ là `node:24-alpine`, `postgres:17-alpine` và `nginx:1.29-alpine`.
+Hai mức ghim ấy không mạnh bằng nhau, và chỗ này phải nói rõ vì nó nằm ngay dưới một yêu cầu đòi phiên bản xác định.
+`package-lock.json` ghim tới đúng một bó byte, còn ba tag image nền thì vẫn di động: một bản vá của cùng phiên bản nhỏ sẽ đổi image nền mà không đổi một ký tự nào trong `Dockerfile`.
+Đồ án chưa quan sát được hậu quả nào từ chỗ đó nên nó không nằm trong ba món nợ đo được ở dưới, nhưng nó là lý do câu "đã ghim" ở đây phải đọc ở mức tag chứ không ở mức byte.
 
 Continuous integration nằm ở `.github/workflows/ci.yml`, chạy trên mỗi pull request và trên mỗi lần `main` nhận commit mới.
 Job `kiem-tra` chạy bốn cổng theo thứ tự: kiểm tra kiểu, lint, dựng stack staging bằng `compose up --build`, rồi chạy toàn bộ bộ kiểm thử qua nginx.

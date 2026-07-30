@@ -77,6 +77,7 @@ Cái phải trả là hai hạng mục không nằm trong kho được, là rule
 
 Yêu cầu trung tâm của mục 25.2 là một lần build phải tái tạo được, tức cùng một đầu vào cho ra cùng một hệ ở máy khác và thời điểm khác.
 Em ghim phụ thuộc bằng `package-lock.json` với `npm ci`, và ghim ba image nền tới phiên bản nhỏ.
+Hai mức ghim đó không mạnh bằng nhau và em nói rõ trong báo cáo: `package-lock.json` ghim tới đúng một bó byte, còn ba tag image nền thì vẫn di động, nên một bản vá của cùng phiên bản nhỏ đổi image nền mà không đổi một ký tự nào trong `Dockerfile`.
 Mọi thay đổi đi qua đúng một đường, là job `kiem-tra` gồm bốn cổng theo thứ tự kiểm kiểu, lint, dựng stack, chạy toàn bộ kiểm thử.
 Một chi tiết trông thừa mà không thừa: workflow chạy cả trên pull request và trên `main`.
 Vì merge bằng squash sinh ra một commit mới, nên nếu chỉ chạy ở pull request thì commit thật sự nằm trên `main` sẽ là commit duy nhất không có image nào, mà đó lại đúng là commit phải đem triển khai.
@@ -201,7 +202,7 @@ Hướng phát triển gần nhất vì vậy không phải thêm tính năng, m
 
 Thứ tự thao tác và những gì mở ở từng chặng nằm ở mục "Bốn chặng demo" dưới đây.
 Câu mở của chặng demo: em sẽ không chạy pipeline trực tiếp, và đó là lựa chọn có lý do.
-Chạy trực tiếp cần runner tự quản còn sống, mất khoảng hai phút hai mươi giây chờ, và có thể đỏ vì lý do không liên quan tới đồ án như mạng hoặc registry.
+Chạy trực tiếp cần runner tự quản còn sống, và cộng hai chặng ở bảng slide mười bảy thì phải chờ hơn hai phút, chưa kể nó có thể đỏ vì lý do không liên quan tới đồ án như mạng hoặc registry.
 Nên bốn chặng sau đều đọc chứng cứ đã tồn tại, và chặng cuối là chặng mạnh nhất vì nó chỉ đọc dữ liệu tĩnh.
 
 ### Slide 22 - Kết luận
@@ -226,9 +227,12 @@ Ba lệnh theo đúng thứ tự, chép từ mục "Dùng thử" của `README.m
 ```sh
 curl -X POST localhost:8080/api/v1/links -H 'content-type: application/json' \
      -d '{"url":"https://example.com/mot-duong-dan-rat-dai"}'
-curl -i localhost:8080/<mã vừa nhận>
-curl localhost:8080/api/v1/links/<mã vừa nhận>/stats
+MA=aB3xY9z   # thay bằng mã mà lệnh trên vừa trả về
+curl -i localhost:8080/$MA
+curl localhost:8080/api/v1/links/$MA/stats
 ```
+
+Đặt mã vào một biến chứ không chép trực tiếp vào đường dẫn, vì dấu ngoặc nhọn là toán tử chuyển hướng của shell nên một chỗ giữ chỗ dạng đó dán vào terminal sẽ lỗi ngay trước mặt giám khảo.
 
 Nói trong lúc chờ: lệnh đầu đi qua nginx vào `link`, lệnh thứ hai đi qua nginx vào `redirect` và nhận về 302, còn `redirect` thì ghi một dòng vào bảng lượt truy cập.
 Ở lệnh thứ ba, nói rằng số lượt do worker `stats` cộng dồn chứ không do `redirect` tính, nên nó tới muộn vài giây; nếu nó còn bằng không thì chạy lại lệnh đó một lần, đừng giải thích vòng.
@@ -303,7 +307,7 @@ Bằng chứng mạnh nhất là em giữ lại những chỗ số liệu nói n
 Chưa tính được, và em nói thẳng chứ không lấp ô đó.
 Lead time theo định nghĩa của em là từ lúc thay đổi vào trunk tới lúc nó chạy trên prod, mà chuỗi tự động hiện dừng ở lúc smoke test trên staging báo xanh vì triển khai prod vẫn làm tay.
 Em có số cho phần chuỗi đã tự động, và em cố ý không trích nó như lead time, vì làm vậy là so một nửa của giai đoạn này với trọn vẹn giai đoạn kia.
-Việc này thuộc ticket mười ba, nó đã hết blocker, và nó là việc kế tiếp của đồ án.
+Việc này thuộc ticket mười ba, và mục giới hạn của báo cáo xếp nó vào hướng phát triển gần nhất.
 Em coi đây là giới hạn nặng nhất của báo cáo, và nó nằm trong mục giới hạn chứ không nằm ở chỗ nào bị làm mờ đi.
 
 ### 6. Vì sao chỉ có năm mẫu?
@@ -331,6 +335,7 @@ Nhưng `docker build` không cho ra kết quả giống nhau giữa hai lần ch
 Em kiểm được chỗ lệch này bằng cách so digest, và em ghi nó ra chứ không để người đọc tự suy ra rằng hai tag trỏ cùng một image.
 Cách chữa em đã biết và không cần viết lại logic build nào, là gắn thêm tag phiên bản vào chính image đã có thay vì dựng lại.
 Lý do chưa làm cũng được ghi ra: đổi cách đóng gói sát ngày nộp đắt hơn cái nó mua, và thiết kế thí nghiệm của em cấm thêm biến vào giữa một giai đoạn đang đo.
+Nếu thầy cô hỏi tiếp về mức ghim thì em nói luôn chỗ thứ hai cùng loại: ba tag image nền của em cũng chỉ ghim tới phiên bản nhỏ chứ không tới digest, nên chúng vẫn di động, và em ghi chỗ đó trong mục 3.2 thay vì để nó nằm im dưới chữ "đã ghim".
 
 ### 9. Vì sao Docker Compose mà không phải Kubernetes?
 

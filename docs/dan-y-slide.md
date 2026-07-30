@@ -61,7 +61,7 @@ Sửa nội dung thì sửa báo cáo trước, rồi sửa lại ở đây.
 
 - Nguyên lý: dựng hệ chạy được từ mã, thư viện và dữ liệu cấu hình
 - Yêu cầu trung tâm: một lần build phải tái tạo được
-- Ghim bằng package-lock, npm ci, ba image nền ghim tới phiên bản nhỏ
+- package-lock ghim tới đúng một bó byte, ba tag image nền chỉ ghim tới phiên bản nhỏ và vẫn di động
 - Một đường build duy nhất: job kiem-tra bốn cổng, rồi job dong-goi
 - Lần chạy trên main không thừa: squash sinh commit mới, đó mới là commit đem triển khai
 
