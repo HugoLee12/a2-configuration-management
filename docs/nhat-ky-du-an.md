@@ -1953,3 +1953,175 @@ Nó cũng là chỗ gọi lại `image.yml`, thứ mà #12 hoá ra không cần 
 
 Nhóm C sau đó còn #14.
 Hai yêu cầu còn nợ từ Giai đoạn thủ công vẫn nguyên và vẫn chưa ticket nào nhận: cần ít nhất một thay đổi chạm `infra/postgres/init.sql`, và cần một thay đổi chạm `services/` đi qua chuỗi đầy đủ.
+
+## 2026-07-30 - Bản phát hành đầu tiên có tên, và hai image của cùng một commit
+
+**Ticket**: #14 (C4), #79
+**Pull request**: #78
+**Phục vụ**: mục 25.4 Release management của sách, ô Hiện thực & CI/CD và ô Reuse & trade-off của rubric
+
+### Ticket đòi cái gì
+
+Mỗi bản phát hành có số hiệu theo semantic versioning và một danh sách thay đổi được sinh ra chứ không viết tay, thay vì chỉ có một mã commit.
+Kèm một tài liệu ngắn nêu quy tắc khi nào tăng major, minor hay patch, gắn với việc thay đổi có phá vỡ tương thích hay không.
+
+### Vì sao ticket này chứ không #13
+
+Đây là lựa chọn của một buổi tối cuối, nên lý do được ghi ra chứ không để nó trông như thứ tự tự nhiên.
+
+Đối chiếu bốn mục 25.1 tới 25.4 của Chương 25 với vật liệu đang có cho một bức tranh lệch: 25.2 System building và 25.3 Change management đã mạnh, 25.1 Version management đủ, còn 25.4 Release management thì mỏng.
+Có triển khai, nhưng không có số phiên bản, không có danh sách thay đổi, không có release notes, và không có đường quay lại.
+#14 vá đúng chỗ mỏng đó.
+
+#13 bị hoãn vì nó đụng `nginx.conf` và `compose.yaml`, cần một ADR, và làm dở thì sáng hôm sau không còn gì đem demo.
+#14 thì chỉ thêm một workflow và tài liệu, nên nó không thể làm hỏng thứ sắp đem ra trình bày.
+Nói cách khác, cả hai đều đáng làm, nhưng chỉ một trong hai làm được mà không đặt phần Demo vào thế rủi ro.
+
+### Ticket bị thu hẹp trước khi làm, và vì sao không đóng với một ô chưa tick
+
+Hai chỗ trong #14 được sửa trước khi viết dòng mã đầu tiên, và cả hai đều để lại vết trên GitHub thay vì sửa lặng lẽ.
+
+Liên kết `blocked-by #13` bị bỏ.
+Thứ tự #13 trước #14 là thứ tự thiết kế chứ không phải rào kỹ thuật: đánh số phiên bản và sinh danh sách thay đổi không cần blue-green, không cần rollback.
+Liên kết được bỏ bằng API chứ không chỉ xoá dòng trong thân bài, vì thân bài là chữ còn liên kết là dữ liệu mà bảng truy vết đọc.
+
+Tiêu chí "Tag trong kho mã, tag image và phiên bản đang chạy khớp nhau" chuyển sang #17.
+Chỗ này là một vòng tham chiếu thật sự: đọc được "phiên bản đang chạy" đòi một endpoint mà #17 mới dựng, trong khi #14 lại đang `blocking #17`.
+Giữ nguyên thì #14 không đóng được cho tới khi #17 xong, mà #17 lại chờ #14, và không có thứ tự làm việc nào thoát ra được.
+
+Cách xử lý có hai lối, và lối được chọn không phải lối nhanh hơn.
+Lối nhanh là đóng #14 với ba ô tick và một ô để trống, kèm một câu giải thích.
+Lối được chọn là sửa yêu cầu: thu tiêu chí ở #14 về đúng phần kiểm được ngay, và chuyển nửa còn lại sang #17 kèm câu ghi rõ nó từ đâu tới.
+
+Lý do nằm ở chỗ 29 ticket trước đều đóng với đủ ô đã tick.
+Phá tiền lệ đó một lần thì mất chính thứ mà bảng truy vết dùng để chứng minh quy trình được tôn trọng, và đó là chỗ giám khảo chọc được bằng một câu hỏi.
+Còn sửa một yêu cầu thay đổi rồi ghi lại lý do thì đúng là bản tốt của 25.3 Change management, không phải một ngoại lệ với nó.
+
+### Semver không có nghĩa cho tới khi nói rõ tương thích với ai
+
+Đây là phần khó nhất của ticket, và nó không nằm trong tiêu chí nào.
+
+Câu "tăng major khi phá vỡ tương thích" đọc thì rõ, nhưng nó không kiểm được cho tới khi trả lời được "tương thích với cái gì".
+Không có câu trả lời ấy thì số major sẽ tăng theo cảm giác về độ lớn của thay đổi, mà độ lớn của thay đổi thì chẳng liên quan gì tới tương thích.
+
+`docs/quy-tac-phien-ban.md` vì vậy định nghĩa hợp đồng công khai trước bảng quy tắc, và định nghĩa nó hẹp: chỉ `/api/v1/...` và `/<mã>`.
+Nhánh `/internal/` nằm ngoài, vì nó là đường dẫn vận hành và người gọi nó là pipeline chứ không phải client.
+Schema của Postgres, tên biến môi trường, cấu trúc dòng log, tên các số đếm ở `/metrics`: tất cả nằm ngoài hợp đồng, dù đổi chúng có thể rất đau khi vận hành.
+
+Hai ví dụ trong tài liệu là để chống lại đúng hai hướng hiểu sai, và cả hai đều lấy từ chính đồ án này.
+#12 viết lại toàn bộ cách triển khai staging mà không đụng một byte nào của hợp đồng, nên nếu nó phát hành thì nó là một bản PATCH.
+Đổi `201` thành `200` ở đường tạo link là một ký tự, và nó là MAJOR.
+
+### Vì sao `v0.1.0` chứ không `v1.0.0`
+
+Đặc tả semver dành riêng dải `0.y.z` cho giai đoạn phát triển ban đầu và nói rõ rằng trong dải đó API công khai chưa được coi là ổn định.
+Đó đúng là trạng thái của hệ này: `/api/v1/` đã chạy và đã có kiểm thử, nhưng nó chưa từng có client nào ngoài bộ kiểm thử.
+
+Chọn `v1.0.0` sẽ là một tuyên bố sai, không phải một con số đẹp hơn: nó nói rằng hợp đồng đã đóng băng, trong khi #18 còn chưa làm.
+`v1.0.0` được để dành cho sau #18, vì lúc ấy câu "phiên bản một không đổi nữa" mới có bằng chứng, là toàn bộ kiểm thử của phiên bản một chạy xanh trên hệ đã có phiên bản hai mà không sửa một dòng.
+
+Một quyết định nữa đi kèm: đúng một số hiệu cho cả hệ, không phải một số cho mỗi service.
+Ba service dùng chung một `Dockerfile` và một image từ #3, nên không có chỗ nào để treo ba số khác nhau.
+Cái giá là một thay đổi chỉ chạm `stats` vẫn làm cả hệ tăng số; cái được là câu hỏi "bản `link` 1.2.0 chạy được với bản `redirect` 1.1.0 không" không tồn tại được.
+
+### Một vòng khép lại, và nó khép mà không viết thêm logic nào
+
+`image.yml` được viết ở #11 dưới dạng `workflow_call` với lý do ghi thẳng trong file: để #12 và #13 gọi lại nó thay vì chép bước build sang chỗ khác.
+Rồi #12 hoá ra không cần, vì job triển khai dùng image đã có sẵn tag chứ không đóng gói lại, và món nợ ấy được ghi vào mục nhật ký của #12.
+
+`phat-hanh.yml` là chỗ gọi lại đó.
+Nó truyền `tag` là tên tag phiên bản, và chạy được vì `image.yml` nhận `tag` rồi `checkout` đúng ref ấy, mà một git tag là một ref hợp lệ.
+
+Chỗ đáng nói không phải là tiết kiệm được mấy dòng.
+Nó là chỗ tag trong kho mã và tag của image trở thành **cùng một chuỗi ký tự**, chứ không phải hai giá trị được đặt cho khớp nhau bằng tay ở hai nơi.
+Hai giá trị đặt cho khớp thì có ngày lệch và không có gì báo động; một giá trị đi qua hai chỗ thì không lệch được.
+
+Bù lại `image.yml` phải sửa một chỗ nhỏ mà nếu bỏ qua thì nó sai: mô tả của đầu vào `tag` viết rằng nó "là SHA đầy đủ của commit được đóng gói", trong khi từ nay nó là bất cứ ref nào.
+
+### Danh sách thay đổi sinh từ pull request, còn tiêu chí nói từ commit
+
+`--generate-notes` của `gh release create` dựng danh sách từ các pull request đã merge kể từ bản phát hành trước, không từ các commit thô.
+Tiêu chí của #14 thì nói "sinh tự động từ lịch sử commit".
+
+Hai cách nói ấy trùng nhau trong kho này, và chỗ tương đương được viết ra chứ không lặng lẽ coi là giống nhau.
+Nó trùng vì `CONTRIBUTING.md` bắt merge bằng squash, nên một pull request để lại đúng một commit trên `main`.
+Nếu về sau kho đổi sang merge commit thì hai tập tách nhau ngay, và lúc đó phải chọn lại; câu này đã ghi vào `docs/quy-tac-phien-ban.md` để lần sau không phải suy lại.
+
+Sinh từ pull request còn tình cờ mạnh hơn ở một điểm.
+Mỗi dòng mang theo số pull request, mà thân pull request lại chứa dòng `Closes #<số>`.
+Nên từ một dòng trong danh sách thay đổi đi ngược về được yêu cầu thay đổi ban đầu, đúng chuỗi truy vết mà `CONTRIBUTING.md` dựng ra, và đó là thứ mà một danh sách sinh từ commit thô không cho.
+
+Bản phát hành cũng do workflow tạo chứ không gõ tay, và nó `needs` job đóng gói.
+Ngược lại thì một lần build hỏng vẫn để lại một release trỏ tới một image không tồn tại, tức đúng loại mắt xích đứt mà việc đánh số phiên bản sinh ra để tránh.
+
+Không thêm `CHANGELOG.md` vào kho mã.
+Trang Releases đã là changelog và nó sinh từ dữ liệu đã có; một file chép lại cùng nội dung sẽ là bản thứ hai phải tự tay giữ cho khớp, tức đúng loại tài liệu tự lệch mà đồ án này đã ghi lại ba lần.
+
+### Hai tag, một commit, hai image khác nhau
+
+Đây là thứ chỉ lộ ra vì bước nghiệm thu đi thêm một câu hỏi nữa, và nó là phần đáng giá nhất của mục này.
+
+Tiêu chí nói tag trong kho mã và tag image phải khớp nhau.
+Cách kiểm dễ nhất là mở trang packages ra nhìn thấy tag `v0.1.0`, và làm vậy thì tick được ô ngay.
+Câu hỏi đi thêm một bước là: image mang tag `v0.1.0` có phải cùng một image với image mang tag SHA của đúng commit ấy không.
+
+Câu trả lời là không.
+Digest của `v0.1.0` là `94aea155…`, còn digest của tag `2cb5e88…` là `fb07ec32…`.
+Cùng một commit, hai lần `docker build`, hai bó byte khác nhau, vì `docker build` không cho ra kết quả giống nhau giữa hai lần chạy.
+
+Nghĩa là câu "tag khớp nhau" đúng ở mức chuỗi ký tự và ở mức commit nguồn, không đúng ở mức digest.
+Và hệ quả nặng hơn cách nói đó: bản đem phát hành chưa từng chạy qua smoke test trên staging, dù một bản dựng từ đúng commit ấy thì có.
+
+Đây cùng hình dạng với món nợ đã ghi ở chênh lệch 4 của `docs/nhat-ky-pipeline.md`, chỉ ở một mắt khác của chuỗi: chỗ đó là "image đã đẩy không phải image đã kiểm", chỗ này là "image đã phát hành không phải image đã kiểm trên staging".
+Nó chữa được mà không viết lại logic build nào, bằng cách gắn thêm tag phiên bản vào chính image đã có thay vì dựng lại, tức `docker buildx imagetools create`.
+
+Không làm bây giờ, và lý do được ghi ra thay vì để trống.
+Đổi cách đóng gói vào tối trước hôm nộp đắt hơn cái nó mua, và `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` cấm thêm biến vào giữa một giai đoạn đang đo.
+Cái phải làm ngay là ghi nó ra, vì thứ nguy hiểm không phải bản thân chỗ lệch mà là việc người đọc tự suy ra rằng hai tag trỏ cùng một image.
+
+### Món nợ số đo của #12 được trả ở đây
+
+`docs/nhat-ky-pipeline.md` nhận dòng của run #12, là dòng đầu tiên trong bảng có đủ sáu mốc kể cả `Hoàn tất staging`.
+
+Nó phải trả ở ticket sau chứ không ở chính #12, và lý do là thứ tự thời gian chứ không phải sự lơ là.
+Run của một pull request chỉ tồn tại **sau** khi pull request ấy merge, tức sau khi mọi file trong nó đã chốt.
+Đây đúng cùng hình dạng với ngoại lệ mà `CONTRIBUTING.md` mô tả cho `docs/nhat-ky-thu-cong.md`: số đo của một thay đổi luôn ra đời muộn hơn thay đổi ấy, nên nó không bao giờ nằm được trong cùng một pull request.
+
+Tiền lệ đã có: #12 điền bù cho #67, #70 và #74.
+Việc điền bù này cũng lộ ra một câu trong file đã thành sai từ #12 mà không ai sửa, là câu "hôm nay chuỗi dừng ở `Hoàn tất build`, vì triển khai vẫn làm tay".
+Nó đúng khi được viết và sai ngay khi #12 merge; đây là lần thứ tư trong đồ án này một tài liệu tự lệch sau một thay đổi mã, và cả bốn lần đều đã được ghi lại.
+
+### Số liệu
+
+Dòng của #12: `Chờ` 3 giây, `Hoàn tất build` cách `Bắt đầu` 71 giây, `Hoàn tất staging` cách `Hoàn tất build` 68 giây nữa.
+Đại lượng `staging` của mục "Công thức" vì vậy có mẫu đầu tiên, và nó có đúng một mẫu.
+Lead time thì vẫn chưa tính được và sẽ chưa tính được cho tới khi #13 xong, vì chuỗi còn thiếu mắt prod.
+
+Bản phát hành `v0.1.0`: từ lúc GitHub nhận cú push tag tới lúc release được công bố là 30 giây, gồm 22 giây đóng gói image và 4 giây tạo release.
+Danh sách thay đổi tự sinh liệt kê 36 pull request, tức toàn bộ lịch sử kho mã, vì không có bản phát hành nào trước nó để làm mốc.
+
+Con số 30 giây ấy không đi vào bảng nào của `docs/nhat-ky-pipeline.md`, và đó là chủ ý.
+Bảng đó ghi mốc của các run trên `main` sinh ra bởi một cú push commit; run phát hành sinh ra bởi một cú push tag, nên nó không phải một dòng cùng loại.
+Phát hành cũng không phải một thay đổi có lead time của riêng nó, nó là một hành động **lên** các thay đổi đã merge.
+
+### Dẫn chứng
+
+- Workflow phát hành và lý do của từng lựa chọn: `.github/workflows/phat-hanh.yml`
+- Quy tắc tăng số, định nghĩa hợp đồng công khai, ba lệnh phát hành, và chỗ lệch digest: `docs/quy-tac-phien-ban.md`
+- Lý do thu hẹp #14, viết lúc thu hẹp chứ không viết lại về sau: comment trên #14
+- Bản phát hành đầu tiên và danh sách thay đổi tự sinh: https://github.com/HugoLee12/a2-configuration-management/releases/tag/v0.1.0
+- Dòng đo của #12 và lý do nó tới muộn: mục "Lệnh trích mốc thô" của `docs/nhat-ky-pipeline.md`
+- Món nợ cùng loại ở một mắt khác của chuỗi: chênh lệch 4 của `docs/nhat-ky-pipeline.md`
+
+### Đang ở đâu sau mục này
+
+**Bản phát hành có tên rồi, nhưng nó chưa tự tới prod.**
+`v0.1.0` đã tồn tại trên GHCR và trên trang Releases; đưa nó lên prod vẫn là thao tác tay theo bước 5 và 6 của `docs/trien-khai-thu-cong.md`.
+
+Nhóm C còn đúng #13, và nó đã hết blocker.
+Nó đóng nốt chuỗi, làm lead time tính được lần đầu, xoá hẳn ràng buộc nhắc triển khai prod bằng tay trong `CLAUDE.md`, và là chỗ tự nhiên để sửa luôn chỗ lệch digest nói ở trên.
+
+Việc đang làm ngay sau mục này là **#77**, tức báo cáo A2, dàn ý slide và kịch bản thuyết trình; buổi thuyết trình là 2026-07-31.
+#77 đã hết blocker sau khi #14 đóng.
+
+Hai yêu cầu còn nợ từ Giai đoạn thủ công vẫn nguyên và vẫn chưa ticket nào nhận: cần ít nhất một thay đổi chạm `infra/postgres/init.sql`, và cần một thay đổi chạm `services/` đi qua chuỗi đầy đủ.
