@@ -3,10 +3,16 @@
 Tài liệu này mô tả cách đưa một thay đổi đã merge vào `main` lên hai môi trường của Hệ thống demo, hoàn toàn bằng tay, và cách bấm giờ trong lúc làm.
 
 Từ #11, hai nửa ấy không còn cùng trạng thái, nên đọc phần nào là tuỳ việc đang làm.
+Từ #12 thì chính các bước cũng không còn cùng trạng thái với nhau.
 
-**Các bước triển khai còn hiệu lực.**
-Triển khai vẫn làm tay cho tới khi #12 tự động hoá staging và #13 tự động hoá prod.
-"Bảng lệnh", "Chuẩn bị", "Các bước", "Khi có sự cố" và "Nếu prod hỏng" vì vậy vẫn là quy trình đang dùng.
+**Chỉ còn nửa prod là quy trình đang dùng.**
+Triển khai prod vẫn làm tay cho tới khi #13 tự động hoá nó.
+"Bảng lệnh", "Chuẩn bị", bước 1, bước 2, bước 5, bước 6, "Khi có sự cố" và "Nếu prod hỏng" vì vậy vẫn phải làm theo.
+
+**Nửa staging đã tự động từ #12.**
+Bước 3 và bước 4 mang dấu **(tự động từ #12)** và không còn được gõ tay nữa: job `trien-khai-staging` của `.github/workflows/ci.yml` làm đúng hai bước ấy sau mỗi lần merge vào `main`.
+Gõ tay thêm một lần nữa không chỉ thừa mà còn sai, vì nó dựng lại staging từ mã nguồn trong khi pipeline dựng từ image đã đóng gói, và hai bản ấy không đảm bảo là một.
+Các dòng tương ứng trong "Bảng lệnh" đã bị chú thích lại vì lý do đó.
 
 **Kỷ luật bấm giờ thì đã đóng.**
 `docs/nhat-ky-thu-cong.md` đóng sổ ngày 2026-07-29 khi #10 xong và không nhận thêm dòng nào, nên không còn mốc nào để lấy và không còn cột nào để điền.
@@ -23,17 +29,27 @@ Mục này là toàn bộ quy trình gói lại thành một khối chép đư�
 Nó không phải bản rút gọn có quyền khác phần dưới: mỗi dòng ở đây tương ứng đúng một dòng ở đó, và khi sửa quy trình thì phải sửa cả hai chỗ.
 
 **Đọc hết mục này trước khi chép khối lệnh.**
-Hai bước trong khối có điều kiện, và cả hai nằm sẵn ở dạng dòng bị chú thích, đúng chỗ phải chạy.
+Dòng bị chú thích trong khối thuộc ba loại khác hẳn nhau, và chỉ một loại được phép mở dấu `#`.
+
+**Loại được mở: hai bước có điều kiện của prod.**
 Bước 1 có một lệnh cho biết lần merge này đụng file nào; theo đó mà bỏ dấu `#` ở dòng tương ứng:
 
-- đụng `infra/postgres/init.sql` thì mở hai dòng `down -v`, chúng nằm **trước** lệnh `up`
-- đụng `infra/nginx/nginx.conf` thì mở hai dòng `restart nginx`, chúng nằm **sau** lệnh `up`
+- đụng `infra/postgres/init.sql` thì mở dòng `down -v`, nó nằm **trước** lệnh `up`
+- đụng `infra/nginx/nginx.conf` thì mở dòng `restart nginx`, nó nằm **sau** lệnh `up`
 
-Bốn dòng còn lại bị chú thích vì lý do khác hẳn: ba lệnh lấy giờ và một lệnh `gh pr view` chỉ phục vụ việc điền `docs/nhat-ky-thu-cong.md`, mà file đó đã đóng sổ.
-Chúng thuộc phần **(đã đóng)** và không bao giờ được mở lại; chúng nằm đó để thấy khối lệnh này từng có hình dạng nào lúc năm mẫu đo được tạo ra.
+Mỗi trường hợp trước đây có hai dòng vì có hai môi trường; nay chỉ còn dòng của prod.
 
-Chép cả khối mà không mở dòng nào là đúng cho thay đổi chỉ đụng mã service, và sai cho hai trường hợp trên.
-Bỏ sót thì bước 4 hoặc bước 6 đỏ; đã xảy ra một lần ở lần triển khai của #5, xem mục "#5 prod" trong `docs/nhat-ky-thu-cong.md`.
+**Loại không bao giờ mở, thứ nhất: bốn dòng của Giai đoạn thủ công.**
+Ba lệnh lấy giờ và một lệnh `gh pr view` chỉ phục vụ việc điền `docs/nhat-ky-thu-cong.md`, mà file đó đã đóng sổ.
+Chúng thuộc phần **(đã đóng)**; chúng nằm đó để thấy khối lệnh này từng có hình dạng nào lúc năm mẫu đo được tạo ra.
+
+**Loại không bao giờ mở, thứ hai: năm dòng của staging.**
+Chúng mang dấu **(tự động từ #12)** và pipeline đã lo xong bước 3 với bước 4 rồi.
+Năm dòng ấy vẫn là lệnh gõ tay chứ không phải lệnh của pipeline, vì khối này phản chiếu phần "Các bước" ở dưới; pipeline làm cùng hai bước ấy bằng lệnh khác đôi chỗ, xem cuối bước 3 và bước 4.
+Mở ra thì staging bị dựng lại từ mã nguồn đè lên bản mà pipeline vừa triển khai từ image, tức là tự tay phá mất thứ vừa được nghiệm thu.
+
+Chép cả khối mà không mở dòng nào là đúng cho thay đổi chỉ đụng mã service, và sai cho hai trường hợp có điều kiện ở trên.
+Bỏ sót thì bước 6 đỏ; đã xảy ra một lần ở lần triển khai của #5, xem mục "#5 prod" trong `docs/nhat-ky-thu-cong.md`.
 
 ```powershell
 # (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm') #   đã đóng: mốc Bắt đầu
@@ -46,11 +62,11 @@ git --no-pager show --stat HEAD                             #   đụng init.sql
 
 npm run typecheck                                           # bước 2
 
-# docker compose --env-file env/staging.env down -v         #   chỉ khi đụng init.sql
-docker compose --env-file env/staging.env up -d --build     # bước 3
-# docker compose --env-file env/staging.env restart nginx   #   chỉ khi đụng nginx.conf
-docker compose --env-file env/staging.env ps                #   phải thấy 5 dòng Up
-npm test                                                    # bước 4, phải thấy pass 20
+# docker compose --env-file env/staging.env down -v         #   tự động từ #12: bước 3
+# docker compose --env-file env/staging.env up -d --build   #   tự động từ #12: bước 3
+# docker compose --env-file env/staging.env restart nginx   #   tự động từ #12: bước 3
+# docker compose --env-file env/staging.env ps              #   tự động từ #12: bước 3
+# npm test                                                  #   tự động từ #12: bước 4
 
 # (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm') #   đã đóng: Hoàn tất của staging
 
@@ -87,8 +103,9 @@ Ranh giới trên là luật **của Giai đoạn thủ công**, không phải l
 Nó chi phối đúng khoảng thời gian năm mẫu đo được tạo ra, và khoảng đó đã khép lại ở #10.
 Vì vậy `.github/workflows/ci.yml` dựng ở #11 không mâu thuẫn với dòng "không được dùng GitHub Actions" ở trên: cấm CI là điều kiện của thí nghiệm, và thí nghiệm ấy đã chạy xong phần của nó.
 
-Cái còn hiệu lực là các bước ở dưới vẫn gõ tay cho tới khi #12 và #13 tự động hoá chúng.
+Cái còn hiệu lực là bốn bước prod ở dưới vẫn gõ tay cho tới khi #13 tự động hoá chúng; hai bước staging thì #12 đã lấy đi rồi.
 Lý do bây giờ chỉ còn là chưa có ai làm thay, không còn là kỷ luật đo lường.
+Cũng vì thế mà `npm run smoke` thêm vào `package.json` ở #12 không phạm dòng "không được thêm lệnh mới vào `scripts`" ở trên: dòng đó là luật của một giai đoạn đã khép lại.
 
 ## Quy tắc bấm giờ (đã đóng)
 
@@ -144,6 +161,9 @@ Hai việc này nằm **ngoài** đồng hồ, vì chúng không lặp lại the
 Sáu bước, theo đúng thứ tự này mỗi lần.
 Mỗi bước ghi kèm thứ phải nhìn thấy thì mới được đi tiếp.
 
+Bước 3 và bước 4 mang dấu **(tự động từ #12)** và giữ nguyên văn: pipeline làm đúng chúng, nên đọc để biết pipeline đang làm gì, đừng gõ lại.
+Bốn bước còn lại vẫn gõ tay.
+
 ### Bước 1: lấy thay đổi về
 
 ```sh
@@ -161,8 +181,9 @@ Rồi xem lần merge này đụng những file nào:
 git --no-pager show --stat HEAD
 ```
 
-Danh sách đó quyết định hai bước có điều kiện ở bước 3 và bước 5, nên phải biết ngay từ đây chứ không phải lúc đã đứng trước lệnh `up`.
-Thấy `infra/postgres/init.sql` thì bước 3 và bước 5 có thêm `down -v`, thấy `infra/nginx/nginx.conf` thì có thêm `restart nginx`.
+Danh sách đó quyết định hai bước có điều kiện ở bước 5, nên phải biết ngay từ đây chứ không phải lúc đã đứng trước lệnh `up`.
+Thấy `infra/postgres/init.sql` thì bước 5 có thêm `down -v`, thấy `infra/nginx/nginx.conf` thì có thêm `restart nginx`.
+Bước 3 cũng từng cần danh sách này; từ #12 thì không, vì pipeline luôn `down -v` chứ không đoán, xem cuối bước 3.
 
 **(Đã đóng)** Mốc merge được lấy từ GitHub chứ không từ `git log`, vì thời điểm tác giả commit không phải thời điểm thay đổi vào `main`:
 
@@ -181,7 +202,7 @@ npm run typecheck
 Đây là bước build duy nhất của hệ, vì Node chạy thẳng TypeScript và không có bước biên dịch.
 Phải không có lỗi nào thì mới đi tiếp.
 
-### Bước 3: triển khai staging
+### Bước 3: triển khai staging (tự động từ #12)
 
 Nếu thay đổi lần này có đụng vào `infra/postgres/init.sql` thì phải xoá volume **trước**:
 
@@ -215,7 +236,17 @@ docker compose --env-file env/staging.env restart nginx
 Bước này bắt buộc và rất dễ quên.
 File config được gắn vào container theo kiểu bind mount nên nội dung trên đĩa đổi ngay, nhưng nginx đã đọc config vào bộ nhớ từ lúc khởi động, còn Compose thì không dựng lại container vì định nghĩa service không đổi.
 
-### Bước 4: nghiệm thu staging
+**Pipeline làm bước này khác ba chỗ**, và ba chỗ ấy là chênh lệch phải mang theo khi so số của hai giai đoạn.
+
+Nó luôn chạy `down -v` chứ không đọc `git show --stat` rồi quyết định, nên hai nhánh có điều kiện ở trên biến mất: nhánh `restart nginx` cũng không cần vì container được dựng lại từ đầu.
+Đổi lại staging mất sạch dữ liệu sau mỗi lần merge, chấp nhận được vì nó chỉ chứa dữ liệu thử.
+
+Nó chạy `up` **không kèm** `--build`, và dựng từ image đã đóng gói ở job `dong-goi` thay vì build lại từ mã nguồn.
+Đây là chỗ nó chặt hơn bước làm tay: bytes chạy trên staging là đúng bytes mang tag của commit, không phải một bản dựng lại được tin là giống.
+
+Và nó không có bước `ps` để mắt người nhìn năm dòng `Up`; câu hỏi ấy do bước 4 trả lời bằng `/readyz` của cả ba service.
+
+### Bước 4: nghiệm thu staging (tự động từ #12)
 
 ```sh
 npm test
@@ -223,6 +254,11 @@ npm test
 
 Bộ kiểm thử mặc định bắn vào `http://localhost:8081`.
 Phải xanh toàn bộ thì mới được đụng tới prod.
+
+**Pipeline chạy `npm run smoke` chứ không `npm test`.**
+Smoke test là tập con của chính bộ kiểm thử này, gồm hai file: `tests/suc-khoe-va-san-sang.test.ts` và `tests/rut-gon-va-chuyen-huong.test.ts`, tức sẵn sàng của cả ba service cộng với đường tạo link và chuyển hướng.
+Ba file còn lại nằm ngoài vì chúng kiểm thứ chậm hoặc thứ không sống còn: `thong-ke-luot-truy-cap` phải chờ worker chạy vài chu kỳ tổng hợp, `metrics` là chuyện đo đạc chứ không phải chuyện phục vụ được, `xac-thuc-dia-chi` kiểm các nhánh từ chối đầu vào.
+Cả năm file vẫn chạy đủ ở job `kiem-tra` trên mỗi pull request, nên không có test nào bị bỏ, chỉ có test nào đứng chắn trên đường phát hành là được chọn lại.
 
 **(Đã đóng)** Xanh thì lấy giờ ngay và ghi vào cột `Hoàn tất` của **dòng staging**.
 Đây là mốc giữa, dễ quên nhất trong cả quy trình, vì cảm giác lúc đó là mới làm được nửa việc chứ chưa xong cái gì.
@@ -296,6 +332,10 @@ Docker cấp lại địa chỉ IP mỗi lần container được dựng lại.
 Phân biệt hai trường hợp, vì chúng cho hai con số khác nhau.
 Đỏ ở staging là bắt được lỗi trước khi tới người dùng, ghi sự cố rồi sửa.
 Đỏ ở prod là một lần phát hành thất bại, và đây mới là thứ tính vào change failure rate.
+
+Từ #12, đỏ ở bước 4 không còn hiện ra trong terminal mà hiện thành job `trien-khai-staging` đỏ trên `main`, kèm log của stack ở bước cuối của job.
+Ý nghĩa của nó thì không đổi: vẫn là bắt được lỗi trước khi tới prod, và vẫn **không** tính vào change failure rate.
+Chỗ đổi là staging lúc đó đang chạy một bản hỏng và pipeline cố ý không dọn nó đi, nên trước khi làm bước 5 thì phải xử lý xong chỗ đỏ ấy.
 
 ## Nếu prod hỏng
 

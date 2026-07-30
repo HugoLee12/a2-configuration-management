@@ -1,7 +1,13 @@
 # Cổng gác của mọi pull request, và là mốc đầu tiên của Giai đoạn pipeline.
 # Thời gian chạy từng bước đọc được trên giao diện Actions; #67 chốt xem trường nào
 # trong số đó là mốc chính thức để tính lead time.
-name: CI
+#
+# Từ #12 file này còn triển khai staging, nên một lần chạy trên `main` đi hết chuỗi
+# kiểm thử, đóng gói rồi phát hành. Ba job nằm chung một workflow chứ không tách ra
+# thành workflow riêng nối bằng `workflow_run`, vì `docs/nhat-ky-pipeline.md` lấy mốc
+# theo từng job của **một** run; tách ra thì một thay đổi sinh hai run và mọi định
+# nghĩa mốc ở đó phải viết lại.
+name: CI và triển khai
 
 on:
   pull_request:
@@ -62,3 +68,85 @@ jobs:
       # commit không tồn tại trên nhánh nào. Tag theo nó thì về sau không truy được
       # image ngược về thay đổi, mà đó lại đúng là mắt xích #22 cần để tính lead time.
       tag: ${{ github.event.pull_request.head.sha || github.sha }}
+
+  # Staging của Giai đoạn pipeline vẫn là `localhost:8081` trên máy chủ đồ án, đúng
+  # môi trường mà Giai đoạn thủ công đã đo. Runner của GitHub không có đường nào tới
+  # đó, nên job này chạy trên một self-hosted runner đăng ký ở chính máy ấy; cách
+  # đăng ký ghi ở mục "Pipeline" của `README.md`.
+  #
+  # `if` không phải để cho gọn: kho này công khai, mà self-hosted runner trên kho
+  # công khai là rủi ro GitHub cảnh báo sẵn, vì một pull request từ fork chạy được
+  # mã tuỳ ý trên máy thật. Chặn bằng cách job chỉ tồn tại trên `push` vào `main`,
+  # tức chỉ với commit đã qua `kiem-tra` và đã được merge.
+  trien-khai-staging:
+    if: github.event_name == 'push'
+    needs: dong-goi
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: read
+    # Staging là đúng một stack trên đúng một máy. Hai lần merge sát nhau mà chạy
+    # song song thì chúng dựng đè lên nhau và smoke test của lần này nghiệm thu bản
+    # của lần kia. Không huỷ lần đang chạy: một lần triển khai bị cắt giữa chừng để
+    # lại trạng thái tệ hơn cả hai đầu.
+    concurrency:
+      group: staging
+      cancel-in-progress: false
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      SERVICE_IMAGE: ${{ needs.dong-goi.outputs.image }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # Ghim Node ở đây chứ không dùng bản có sẵn trên máy: bộ kiểm thử là TypeScript
+      # chạy thẳng, mà việc bóc kiểu lúc chạy là hành vi gắn với phiên bản Node. Smoke
+      # test phải chạy trên cùng bản với job `kiem-tra` thì hai kết quả mới so được.
+      # Không cần `cache: npm` vì không có bước cài phụ thuộc nào ở dưới.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Đăng nhập GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: $env:GHCR_TOKEN | docker login ghcr.io -u $env:GITHUB_ACTOR --password-stdin
+
+      # Ba lệnh dưới đây cố ý là ba bước chứ không phải một khối. Trong pwsh, một lệnh
+      # ngoài thất bại không dừng script, và GitHub chỉ đọc mã thoát của lệnh **cuối**;
+      # gộp lại thì `docker pull` hỏng mà `up` xanh sẽ đi qua êm ru, với staging chạy
+      # một image cũ còn sót trên máy. Tách ra thì mỗi lệnh tự là mã thoát của nó.
+
+      # Kéo trước khi hạ, không phải sau. Đây là bước duy nhất phụ thuộc vào mạng và
+      # vào GHCR, tức bước dễ hỏng vì lý do không liên quan gì tới thay đổi vừa merge.
+      # Hạ trước rồi mới kéo thì một lần GHCR trục trặc để lại staging đã tắt và volume
+      # đã xoá, tức tự gây sự cố từ một lỗi mạng. Kéo trước thì hỏng ở đây chỉ làm job
+      # đỏ, còn staging cũ vẫn đứng nguyên đó.
+      - name: Kéo image vừa đóng gói
+        run: docker pull $env:SERVICE_IMAGE
+
+      # Xoá volume mỗi lần, không hỏi lần merge này có đụng `init.sql` hay không.
+      # Bước có điều kiện ở `docs/trien-khai-thu-cong.md` chạy được vì có người đọc
+      # `git show --stat` rồi tự quyết; ở đây không có ai đọc, và một nhánh điều kiện
+      # không ai kiểm là chỗ hỏng âm thầm. Staging chỉ chứa dữ liệu thử nên nền sạch
+      # rẻ hơn nhiều so với việc đoán sai.
+      - name: Hạ staging cũ và xoá dữ liệu
+        run: docker compose --env-file env/staging.env down -v
+
+      # `--no-build` là chốt chặn: thiếu nó thì Compose lặng lẽ dựng lại image từ mã
+      # nguồn, và staging chạy một bản không phải bản đã đóng gói, đúng loại lệch mà
+      # tag theo commit sinh ra để tránh.
+      - name: Dựng staging từ đúng image đó
+        run: docker compose --env-file env/staging.env up -d --no-build
+
+      # Không có `npm ci` trước bước này, và đó là hệ quả trực tiếp của ràng buộc hộp
+      # đen ở #3: bộ kiểm thử chỉ gửi HTTP nên nó không import gì ngoài `node:`.
+      - name: Smoke test qua nginx
+        run: npm run smoke
+
+      # Không `down` khi đỏ. Stack hỏng còn đứng đó là thứ mổ xẻ được bằng tay, còn
+      # log của run thì hết hạn lưu giữ là mất; #13 mới là chỗ có rollback tự động.
+      - name: Log của stack khi smoke test đỏ
+        if: failure()
+        run: docker compose --env-file env/staging.env logs --no-color
