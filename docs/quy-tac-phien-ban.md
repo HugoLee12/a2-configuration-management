@@ -110,6 +110,16 @@ Trang Releases trên GitHub **là** changelog, và nó sinh từ dữ liệu đ�
 
 ## Cái gì chưa nằm ở đây
 
+**Image của bản phát hành là một lần dựng lại, không phải cùng bó byte đã qua smoke test.**
+Một commit trên `main` được đóng gói hai lần: một lần bởi `ci.yml` với tag là SHA, rồi một lần nữa bởi `phat-hanh.yml` với tag là số phiên bản.
+Hai image ấy cùng nội dung nguồn nhưng khác digest, vì `docker build` không cho ra byte giống nhau giữa hai lần chạy.
+Kiểm được bằng cách so `RepoDigests` của hai tag; với `v0.1.0` thì digest là `94aea155…` còn image tag SHA `2cb5e88…` là `fb07ec32…`.
+
+Hệ quả phải mang theo: câu "tag trong kho mã và tag image khớp nhau" đúng ở mức chuỗi ký tự và ở mức commit nguồn, không đúng ở mức digest.
+Nghĩa là bản đem phát hành chưa từng chạy qua smoke test trên staging, dù một bản dựng từ đúng commit ấy thì có.
+Đây cùng loại với món nợ đã ghi ở chênh lệch 4 của `docs/nhat-ky-pipeline.md`, và nó chữa được mà không viết lại logic build: thay vì dựng lại, gắn thêm tag phiên bản vào chính image đã có bằng `docker buildx imagetools create`.
+Chưa làm vì đổi cách đóng gói sát ngày nộp đắt hơn cái nó mua, và vì `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` cấm thêm biến vào giữa một giai đoạn đang đo.
+
 Số phiên bản hiện nối được hai thứ: tag trong kho mã và tag của image trên GHCR.
 Mắt thứ ba, là bản đang chạy trên môi trường tự khai nó là bản nào, thuộc về #17; cho tới lúc ấy câu hỏi "prod đang chạy bản nào" vẫn phải trả lời bằng cách tra tag của image trong `compose.yaml` đang dùng.
 
