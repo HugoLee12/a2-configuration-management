@@ -159,7 +159,7 @@ Node 24 chạy thẳng TypeScript nên không có bước biên dịch riêng: k
 
 `.github/workflows/ci.yml` chạy trên mỗi pull request và trên mỗi lần `main` nhận commit mới: cài phụ thuộc, kiểm tra kiểu, lint, dựng stack staging rồi chạy bộ kiểm thử qua nginx, sau đó đóng gói image và đẩy lên GHCR với tag là SHA của commit.
 Lần chạy trên `main` không thừa: merge bằng squash sinh ra một commit mới, nên nếu chỉ chạy ở pull request thì commit thật sự nằm trên `main` sẽ là commit duy nhất không có image nào.
-Bước đóng gói nằm riêng ở `.github/workflows/image.yml` dạng `workflow_call`, để #13 gọi lại chính nó thay vì chép bước build sang chỗ khác.
+Bước đóng gói nằm riêng ở `.github/workflows/image.yml` dạng `workflow_call`, để chỗ khác gọi lại chính nó thay vì chép bước build sang nơi mới.
 
 Trên `main` có thêm job thứ ba là `trien-khai-staging`: nó kéo image vừa đẩy về, dựng lại staging từ đúng image ấy, rồi chạy `npm run smoke` qua nginx để nghiệm thu.
 Smoke test là tập con của chính bộ kiểm thử, gồm hai file kiểm sẵn sàng của cả ba service và đường tạo link với chuyển hướng; chi tiết ở bước 4 của `docs/trien-khai-thu-cong.md`.
@@ -167,6 +167,10 @@ Smoke test đỏ thì job đỏ, và lần chạy trên `main` mang dấu X.
 
 Build và triển khai staging vì vậy không còn làm tay nữa.
 **Triển khai prod thì vẫn làm tay** theo bước 5 và bước 6 của `docs/trien-khai-thu-cong.md`, cho tới khi #13 tự động hoá nốt.
+
+`.github/workflows/phat-hanh.yml` là workflow thứ ba, và nó chạy theo một tín hiệu khác: một cú push tag `v*`, không phải một cú push commit.
+Nó gọi lại `image.yml` với `tag` là tên tag, nên image trên GHCR mang đúng chuỗi ký tự của tag trong kho mã, rồi tạo bản phát hành trên GitHub với danh sách thay đổi tự sinh từ các pull request đã merge.
+Quy tắc chọn số phiên bản, cái gì được coi là hợp đồng công khai, và ba lệnh để phát hành: `docs/quy-tac-phien-ban.md`.
 
 ### Runner tự quản cho staging
 

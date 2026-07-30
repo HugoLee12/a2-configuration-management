@@ -1,0 +1,62 @@
+# Phát hành một bản có số hiệu, và là mắt cuối của mục 25.4 Release management.
+# Từ đây một bản phát hành có tên đọc được, có image mang đúng tên đó, và có danh
+# sách thay đổi được sinh ra chứ không viết tay.
+#
+# Kích hoạt bằng cú push một tag `v*`, không phải bằng nút bấm cũng không theo lịch.
+# Tag là thứ duy nhất trong git nói được câu "bản này là bản được chọn để phát hành",
+# và nó nằm trong kho mã; chọn `workflow_dispatch` thì lựa chọn ấy chỉ sống trong
+# lịch sử Actions, tức mất theo chính sách lưu giữ như mọi thứ khác ở đó.
+#
+# Quy tắc chọn số cho tag nằm ở `docs/quy-tac-phien-ban.md`.
+name: Phát hành
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  # Gọi lại `image.yml` thay vì chép bước build sang đây, và truyền tên tag làm `tag`.
+  # Chạy được vì `image.yml` nhận `tag` rồi `checkout` đúng ref đó, mà một git tag là
+  # một ref hợp lệ. Nhờ vậy tag trong kho mã và tag của image là **cùng một chuỗi ký
+  # tự**, không phải hai giá trị được đặt cho khớp nhau bằng tay.
+  #
+  # Đây là chỗ gọi lại thứ hai mà `image.yml` được viết ra để có, sau khi #12 hoá ra
+  # không cần vì job triển khai dùng image đã có sẵn tag chứ không đóng gói lại.
+  dong-goi:
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/image.yml
+    with:
+      tag: ${{ github.ref_name }}
+
+  # Bản phát hành được tạo **sau** khi image đã đẩy xong, không song song với nó.
+  # Ngược lại thì một lần build hỏng vẫn để lại một release trỏ tới một image không
+  # tồn tại, tức đúng loại mắt xích đứt mà việc đánh số phiên bản sinh ra để tránh.
+  phat-hanh:
+    needs: dong-goi
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      # Không cần `checkout`: `gh` làm việc qua API và đã biết kho nào nhờ `--repo`.
+      #
+      # `--generate-notes` để GitHub tự dựng danh sách thay đổi từ các pull request đã
+      # merge kể từ bản phát hành trước. Kho này merge bằng squash nên một pull request
+      # ứng đúng một commit, và ở đây "sinh từ pull request" với "sinh từ lịch sử
+      # commit" là cùng một tập; chỗ tương đương ấy được ghi rõ ở
+      # `docs/quy-tac-phien-ban.md` chứ không coi là hiển nhiên.
+      #
+      # `--verify-tag` để lệnh dừng nếu tag không tồn tại thật, thay vì lặng lẽ tạo
+      # một tag mới trên ngọn nhánh mặc định.
+      - name: Tạo bản phát hành với danh sách thay đổi tự sinh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --generate-notes \
+            --verify-tag

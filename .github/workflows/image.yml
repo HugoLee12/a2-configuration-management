@@ -1,15 +1,19 @@
 # Đơn vị dùng lại của pipeline. Nó không nhận tên service làm tham số, vì ba service
 # đã dùng chung đúng một Dockerfile và một image từ #3: tham số hoá theo service ở
 # đây chỉ đổi được cái tên trên tag chứ không đổi được một byte nào trong image.
-# Chỗ tái sử dụng thật vì vậy nằm giữa các workflow, không nằm giữa ba service:
-# #12 và #13 sẽ gọi lại chính file này thay vì chép bước build sang chỗ khác.
+# Chỗ tái sử dụng thật vì vậy nằm giữa các workflow, không nằm giữa ba service.
+# Hai chỗ gọi lại hiện có là `ci.yml` và `phat-hanh.yml`; #12 hoá ra không cần vì job
+# triển khai dùng image đã có sẵn tag chứ không đóng gói lại.
 name: Đóng gói image
 
 on:
   workflow_call:
     inputs:
       tag:
-        description: Tag gắn cho image, là SHA đầy đủ của commit được đóng gói
+        # Bất cứ ref nào cũng được, vì bước dưới `checkout` đúng ref này rồi lấy chính
+        # chuỗi ấy làm tag. `ci.yml` truyền SHA đầy đủ của commit, `phat-hanh.yml`
+        # truyền tên tag phiên bản.
+        description: Ref được đóng gói, và cũng là tag gắn cho image
         required: true
         type: string
     outputs:
