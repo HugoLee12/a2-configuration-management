@@ -1,6 +1,16 @@
 # Tài liệu học tập có bản quyền, không đưa lên kho công khai
 *.pdf
 
+# Bản .docx của báo cáo là sản phẩm dẫn xuất của docs/bao-cao-a2.md,
+# sinh lại bằng tools/bao-cao-sang-docx.py; nguồn sự thật là bản Markdown
+bao-cao-a2.docx
+
+# File chủ sở hữu mà Word tạo bên cạnh một .docx đang mở, không phải sản phẩm
+~$*.docx
+
+# Python, chỉ có ở tools/
+__pycache__/
+
 # Node
 node_modules/
 dist/
