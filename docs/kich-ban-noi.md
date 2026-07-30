@@ -67,9 +67,10 @@ Và TypeScript chạy thẳng trên Node không có bước biên dịch, nên v
 
 ### Slide 6 - 25.1 Version management
 
-Mục 25.1 định nghĩa baseline là một tập phiên bản đã cố định, đủ để dựng nên một hệ chạy được, và chỗ dễ bỏ qua nhất là baseline gồm cả những thứ không phải mã.
-Từ đó em rút ra yêu cầu rằng ranh giới của baseline phải rộng bằng ranh giới của hệ.
-Nên cấu hình nginx, schema Postgres, định nghĩa stack, các file môi trường và cả ba workflow đều nằm trong cùng kho mã với mã nguồn.
+Em bắt đầu bằng một câu hỏi rất thực tế: muốn dựng lại đúng cái hệ đã chạy hôm qua thì quản lý mã nguồn thôi có đủ không.
+Không đủ, vì thiếu một file cấu hình hay một dữ liệu môi trường thì phần mã còn lại không dựng thành một hệ chạy được.
+Mục 25.1 gọi cái tập phiên bản đã cố định, đủ để dựng nên một hệ chạy được ấy là baseline, và chỗ dễ bỏ qua nhất nằm ngay trong định nghĩa: baseline gồm cả những thứ không phải mã.
+Yêu cầu rút ra vì vậy là ranh giới của baseline phải rộng bằng ranh giới của hệ, nên cấu hình nginx, schema Postgres, định nghĩa stack, các file môi trường và cả ba workflow đều nằm trong cùng kho mã với mã nguồn.
 Kết quả là baseline theo nghĩa của sách trùng đúng với một commit, không phải một commit cộng thêm một thứ nằm ở nơi khác.
 Cái phải trả là hai hạng mục không nằm trong kho được, là rule bảo vệ nhánh trên GitHub và image trên GHCR, và em ghi cả hai ra thay vì làm mờ đi.
 
@@ -92,8 +93,9 @@ Hai món nợ đầu cùng một hình dạng, và hình dạng ấy đáng nói
 
 ### Slide 9 - 25.3 Change management
 
-Mục 25.3 mô tả một chuỗi thủ tục có hội đồng phê duyệt, và hội đồng đó không chuyển thẳng sang một đồ án một người vì không có ai độc lập để duyệt.
-Nên phần kiểm soát của em chuyển sang một cổng gác tự động: mọi thay đổi đi qua issue, nhánh, pull request có dòng `Closes`, rồi squash vào `main`.
+Vấn đề mà mục 25.3 đặt ra không phải là ghi lại thay đổi, mà là phải có một chỗ từ chối được một thay đổi không đạt; thiếu chỗ đó thì hệ không phải đang tiến hoá mà là đang trôi.
+Sommerville đặt chỗ từ chối ấy vào một hội đồng phê duyệt, xét từng yêu cầu thay đổi trước khi nó được hiện thực.
+Hội đồng đó không chuyển thẳng sang một đồ án một người vì không có ai độc lập để duyệt, nên phần kiểm soát của em chuyển sang một cổng gác tự động: mọi thay đổi đi qua issue, nhánh, pull request có dòng `Closes`, rồi squash vào `main`.
 Chuỗi ấy không phải để trang trí, nó là mắt xích em dùng để tính lead time, nên một pull request thiếu dòng đó làm hỏng số đo chứ không chỉ mất một liên kết.
 Điều em muốn nhấn: em nghiệm thu cổng gác ở cả chiều đỏ, không chỉ chiều xanh.
 Em cố ý thêm một test trượt vào một nhánh, và ba thứ xảy ra đúng như mong đợi: kiểm tra đỏ, pull request chuyển sang trạng thái bị chặn, và job đóng gói bị bỏ qua nên không có image nào được đẩy cho một commit hỏng.
@@ -111,11 +113,13 @@ Không lần nào có test đỏ, vì không lần nào hệ thống hỏng; th�
 
 ### Slide 11 - 25.4 Release management
 
-Một bản phát hành của em được kích hoạt bằng một cú push tag, không bằng nút bấm cũng không theo lịch.
-Lý do là tag nằm trong kho mã, còn một nút bấm thì chỉ để lại dấu vết trong lịch sử của công cụ, tức mất theo chính sách lưu giữ.
+Một bản build thì chỉ cần chạy được hôm nay, còn một bản đã phát hành thì có ngày phải dựng lại rất lâu về sau, có khi để quay về sau một sự cố.
+Đó là lý do mục 25.4 tách release ra khỏi một bản build bất kỳ, và đòi hai thứ ở nó: mỗi bản phải được ghi lại đủ để dựng lại chính xác, và phải mang một số hiệu theo một sơ đồ nhất quán nói được nó đứng ở đâu so với các bản khác.
+Yêu cầu thứ nhất kéo theo một chuyện dễ bỏ qua, là ngay cả việc chọn bản nào được phát hành cũng phải để lại dấu vết ở chỗ sống lâu bằng kho mã.
+Nên bản phát hành của em được kích hoạt bằng một cú push tag, không bằng nút bấm cũng không theo lịch: tag nằm trong kho mã, còn một nút bấm thì chỉ để lại dấu vết trong lịch sử của công cụ, tức mất theo chính sách lưu giữ.
 Workflow phát hành gọi lại workflow đóng gói, nên tag trong kho mã và tag của image là cùng một chuỗi ký tự đi qua hai chỗ, chứ không phải hai giá trị đặt cho khớp bằng tay.
 Changelog thì GitHub dựng từ các pull request đã merge, nên em không giữ file `CHANGELOG.md` nào: một file chép lại cùng nội dung sẽ là bản thứ hai phải tự tay giữ cho khớp, tức đúng loại tài liệu tự lệch mà slide trước vừa đếm bốn lần.
-Bản đầu là `v0.1.0` chứ không phải `v1.0.0`, và đó là một tuyên bố: đặc tả semver dành dải không chấm y chấm z cho giai đoạn API công khai chưa ổn định, mà đó đúng là trạng thái của hệ này.
+Còn yêu cầu về số hiệu thì em trả bằng semver, và bản đầu là `v0.1.0` chứ không phải `v1.0.0`, đó là một tuyên bố: đặc tả semver dành dải không chấm y chấm z cho giai đoạn API công khai chưa ổn định, mà đó đúng là trạng thái của hệ này.
 
 ### Slide 12 - Thiết kế thí nghiệm hai giai đoạn
 
