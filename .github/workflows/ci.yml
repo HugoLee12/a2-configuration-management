@@ -118,6 +118,14 @@ jobs:
       # gộp lại thì `docker pull` hỏng mà `up` xanh sẽ đi qua êm ru, với staging chạy
       # một image cũ còn sót trên máy. Tách ra thì mỗi lệnh tự là mã thoát của nó.
 
+      # Kéo trước khi hạ, không phải sau. Đây là bước duy nhất phụ thuộc vào mạng và
+      # vào GHCR, tức bước dễ hỏng vì lý do không liên quan gì tới thay đổi vừa merge.
+      # Hạ trước rồi mới kéo thì một lần GHCR trục trặc để lại staging đã tắt và volume
+      # đã xoá, tức tự gây sự cố từ một lỗi mạng. Kéo trước thì hỏng ở đây chỉ làm job
+      # đỏ, còn staging cũ vẫn đứng nguyên đó.
+      - name: Kéo image vừa đóng gói
+        run: docker pull $env:SERVICE_IMAGE
+
       # Xoá volume mỗi lần, không hỏi lần merge này có đụng `init.sql` hay không.
       # Bước có điều kiện ở `docs/trien-khai-thu-cong.md` chạy được vì có người đọc
       # `git show --stat` rồi tự quyết; ở đây không có ai đọc, và một nhánh điều kiện
@@ -125,9 +133,6 @@ jobs:
       # rẻ hơn nhiều so với việc đoán sai.
       - name: Hạ staging cũ và xoá dữ liệu
         run: docker compose --env-file env/staging.env down -v
-
-      - name: Kéo image vừa đóng gói
-        run: docker pull $env:SERVICE_IMAGE
 
       # `--no-build` là chốt chặn: thiếu nó thì Compose lặng lẽ dựng lại image từ mã
       # nguồn, và staging chạy một bản không phải bản đã đóng gói, đúng loại lệch mà

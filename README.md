@@ -174,7 +174,9 @@ Staging là `localhost:8081` trên máy chủ đồ án, đúng môi trường m
 Runner của GitHub nằm trên mây và không có đường nào tới đó, nên job `trien-khai-staging` chạy trên một self-hosted runner đăng ký ở chính máy ấy.
 Đây là việc cài một lần, theo `Settings > Actions > Runners > New self-hosted runner` của kho mã; nhãn mặc định `self-hosted` là nhãn mà workflow đang chọn.
 
-Máy đó cần Docker Desktop đang chạy và cần `git`; Node thì workflow tự cài bản 24 nên không cần sẵn.
+Máy đó cần Docker Desktop đang chạy, cần `git`, và cần PowerShell 7 vì job chạy mọi bước bằng `pwsh`.
+PowerShell 7 không có sẵn trên Windows: bản dựng sẵn là Windows PowerShell 5.1, một chương trình khác tên `powershell`.
+Node thì workflow tự cài bản 24 nên không cần sẵn.
 Runner không chạy thì lần triển khai xếp hàng chờ chứ không hỏng, và nó chạy tiếp khi runner sống lại.
 
 Kho mã này công khai, mà self-hosted runner trên kho công khai là rủi ro có thật: một pull request từ fork chạy được mã tuỳ ý trên máy thật.

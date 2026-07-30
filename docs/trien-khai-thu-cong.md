@@ -44,7 +44,8 @@ Ba lệnh lấy giờ và một lệnh `gh pr view` chỉ phục vụ việc đi
 Chúng thuộc phần **(đã đóng)**; chúng nằm đó để thấy khối lệnh này từng có hình dạng nào lúc năm mẫu đo được tạo ra.
 
 **Loại không bao giờ mở, thứ hai: năm dòng của staging.**
-Chúng mang dấu **(tự động từ #12)** và pipeline đã chạy chúng rồi.
+Chúng mang dấu **(tự động từ #12)** và pipeline đã lo xong bước 3 với bước 4 rồi.
+Năm dòng ấy vẫn là lệnh gõ tay chứ không phải lệnh của pipeline, vì khối này phản chiếu phần "Các bước" ở dưới; pipeline làm cùng hai bước ấy bằng lệnh khác đôi chỗ, xem cuối bước 3 và bước 4.
 Mở ra thì staging bị dựng lại từ mã nguồn đè lên bản mà pipeline vừa triển khai từ image, tức là tự tay phá mất thứ vừa được nghiệm thu.
 
 Chép cả khối mà không mở dòng nào là đúng cho thay đổi chỉ đụng mã service, và sai cho hai trường hợp có điều kiện ở trên.
@@ -65,7 +66,7 @@ npm run typecheck                                           # bước 2
 # docker compose --env-file env/staging.env up -d --build   #   tự động từ #12: bước 3
 # docker compose --env-file env/staging.env restart nginx   #   tự động từ #12: bước 3
 # docker compose --env-file env/staging.env ps              #   tự động từ #12: bước 3
-# npm run smoke                                             #   tự động từ #12: bước 4
+# npm test                                                  #   tự động từ #12: bước 4
 
 # (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm') #   đã đóng: Hoàn tất của staging
 

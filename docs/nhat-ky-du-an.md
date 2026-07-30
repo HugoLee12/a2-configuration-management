@@ -1888,7 +1888,11 @@ Pipeline chạy `up` **không kèm** `--build`, và dựng từ image đã đón
 Nửa còn nợ vẫn nợ: `Hoàn tất build` vẫn chỉ có nghĩa "đã đẩy".
 
 Để làm được điều đó, `compose.yaml` nhận thêm biến `SERVICE_IMAGE` với mặc định khai trong từng file env, và job triển khai đè biến ấy bằng tham chiếu GHCR theo commit.
-`--no-build` không phải cho gọn mà là chốt chặn: thiếu nó thì Compose lặng lẽ dựng lại image từ mã nguồn khi `docker pull` hỏng, và staging chạy một bản không phải bản đã đóng gói, đúng loại lệch mà việc tag theo commit sinh ra để tránh.
+`--no-build` không phải cho gọn mà là chốt chặn: thiếu nó thì Compose lặng lẽ dựng lại image từ mã nguồn thay vì báo là không có image, và staging chạy một bản không phải bản đã đóng gói, đúng loại lệch mà việc tag theo commit sinh ra để tránh.
+
+Ba lệnh ấy còn phải đúng thứ tự, và bản đầu tiên viết sai: `docker pull` phải đứng **trước** `down -v`.
+`pull` là bước duy nhất phụ thuộc vào mạng và vào GHCR, tức bước hỏng được vì lý do chẳng liên quan gì tới thay đổi vừa merge; hạ staging trước rồi mới kéo thì một lần GHCR trục trặc biến thành sự cố tự gây ra, với staging đã tắt và volume đã xoá.
+Kéo trước thì hỏng ở đó chỉ làm job đỏ, còn staging cũ vẫn đứng nguyên, đúng với chính sách "không dọn khi đỏ" mà job tự tuyên bố ở bước cuối.
 
 Và pipeline không có bước `ps` để mắt người nhìn năm dòng `Up`; câu hỏi ấy do smoke test trả lời bằng `/readyz` của cả ba service.
 
@@ -1922,6 +1926,9 @@ Năm dòng đang có trong `docs/nhat-ky-pipeline.md` đều chạy trước #12
 
 Con số duy nhất trích được lúc này vẫn là `Hoàn tất build` trừ `Bắt đầu`, nay có năm mẫu thay vì hai, và cột `Chờ` dao động từ 3 tới 8 giây.
 Lead time thì vẫn chưa tính được và sẽ chưa tính được cho tới khi #13 xong, vì chuỗi còn thiếu mắt prod.
+
+Riêng tiêu chí "smoke test xong trong vài giây" thì đo được ngay tại chỗ, trên staging cục bộ: 6 test, `duration_ms` 240, khoảng 7 giây tính cả lúc npm khởi động và lúc chờ ba service báo `/readyz`.
+Cả năm file là 20 test và `duration_ms` 1136, nên phần tiết kiệm được không nằm ở số giây của test mà ở chỗ không phải chờ worker `stats` chạy vài chu kỳ tổng hợp.
 
 ### Dẫn chứng
 
