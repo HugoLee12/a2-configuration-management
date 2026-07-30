@@ -182,7 +182,7 @@ Bốn đại lượng đầu cộng lại đúng bằng lead time, giống hệt
 Đẳng thức này không phải chuyện thẩm mỹ: nó là thứ khiến bảng tự kiểm được, và nó là lý do cột prod được trừ từ mốc trước nó chứ không từ `Bắt đầu`.
 
 **Lead time của Giai đoạn pipeline chưa tính được, và sẽ chưa tính được cho tới khi #13 xong.**
-Hôm nay chuỗi dừng ở `Hoàn tất build`, vì triển khai vẫn làm tay theo `docs/trien-khai-thu-cong.md`.
+Từ #12 chuỗi đi được tới `Hoàn tất staging`, rồi dừng ở đó, vì triển khai prod vẫn làm tay theo `docs/trien-khai-thu-cong.md`.
 Mọi con số trích từ bảng dưới trong khoảng này là số của **một phần** quy trình, và trích nó như lead time sẽ so một nửa của giai đoạn này với trọn vẹn giai đoạn kia.
 
 ## Lệnh trích mốc thô
@@ -209,9 +209,11 @@ gh api "repos/{owner}/{repo}/actions/runs?event=push&branch=main&status=complete
 
 Đầu ra là tám cột đúng thứ tự của bảng dưới, ngăn nhau bằng tab, mới nhất trước, nên chép sang bảng thì không phải đảo cột nào.
 
-Lệnh đã chạy thật lúc chốt #12, và đầu ra nguyên văn là:
+Lệnh đã chạy thật hai lần, lúc chốt #12 và lúc chốt #14.
+Đầu ra nguyên văn của lần sau là:
 
 ```text
+#12	335f234	2026-07-30T02:06:56Z	2026-07-30T02:06:59Z	2026-07-30T02:08:10Z	2026-07-30T02:09:18Z	success	1
 #74	cfae89c	2026-07-29T14:37:44Z	2026-07-29T14:37:47Z	2026-07-29T14:39:08Z	-	success	1
 #70	1008e86	2026-07-29T14:20:08Z	2026-07-29T14:20:16Z	2026-07-29T14:21:24Z	-	success	1
 #67	b2edeb4	2026-07-29T14:03:26Z	2026-07-29T14:03:32Z	2026-07-29T14:04:56Z	-	success	1
@@ -219,8 +221,13 @@ Lệnh đã chạy thật lúc chốt #12, và đầu ra nguyên văn là:
 #11	a117d94	2026-07-29T13:17:36Z	2026-07-29T13:17:40Z	2026-07-29T13:18:56Z	-	success	1
 ```
 
-Cột `Hoàn tất staging` là `-` ở cả năm dòng vì cả năm run đều có trước #12, tức trước khi job `trien-khai-staging` tồn tại.
-Ba dòng đầu là mốc của #67, #70 và #74; chúng chạy sau khi file này được viết và được chép vào bảng ở chính lần sửa này.
+Cột `Hoàn tất staging` là `-` ở năm dòng dưới vì cả năm run đều có trước #12, tức trước khi job `trien-khai-staging` tồn tại.
+Dòng `#12` là run đầu tiên có job ấy, nên nó là dòng đầu tiên có cả sáu mốc.
+
+Nó cũng là lý do lệnh phải chạy lại lần thứ hai.
+Run của pull request đóng #12 chỉ tồn tại **sau** khi pull request ấy merge, tức sau khi mọi file trong pull request ấy đã chốt, nên mốc của nó không thể nằm trong chính pull request đó.
+Đây đúng cùng hình dạng với ngoại lệ mà `CONTRIBUTING.md` mô tả cho `docs/nhat-ky-thu-cong.md`: số đo của một thay đổi luôn ra đời muộn hơn thay đổi ấy.
+Ở Giai đoạn thủ công, món nợ đó được trả bằng một pull request riêng không mang dòng `Closes`; ở đây nó được trả kèm ticket kế tiếp, đúng như #12 đã điền bù cho #67, #70 và #74.
 
 Ba chi tiết trong khối lệnh là lựa chọn chứ không phải mặc định.
 
@@ -268,18 +275,21 @@ Bảng cố ý không có cột nào chứa số phút đã tính sẵn, đúng 
 | #67 | `b2edeb4` | 2026-07-29T14:03:26Z | 2026-07-29T14:03:32Z | 2026-07-29T14:04:56Z | - | success | 1 |
 | #70 | `1008e86` | 2026-07-29T14:20:08Z | 2026-07-29T14:20:16Z | 2026-07-29T14:21:24Z | - | success | 1 |
 | #74 | `cfae89c` | 2026-07-29T14:37:44Z | 2026-07-29T14:37:47Z | 2026-07-29T14:39:08Z | - | success | 1 |
+| #12 | `335f234` | 2026-07-30T02:06:56Z | 2026-07-30T02:06:59Z | 2026-07-30T02:08:10Z | 2026-07-30T02:09:18Z | success | 1 |
 
 ## Ghi chú
 
-### Năm dòng đầu không phải mẫu đo của giai đoạn
+### Sáu dòng đầu không phải mẫu đo của giai đoạn
 
-Cả năm dòng trên đều là thay đổi chỉ chạm tài liệu và cấu hình, không phải thay đổi cỡ chuẩn theo cách `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` dùng từ này.
+Cả sáu dòng trên đều là thay đổi chỉ chạm tài liệu, cấu hình và pipeline, không phải thay đổi cỡ chuẩn theo cách `docs/adr/0003-thiet-ke-thi-nghiem-hai-giai-doan.md` dùng từ này.
+Dòng `#12` cũng vậy, dù nó chạm `compose.yaml` và `package.json`: nó không đổi một dòng nào trong `services/`.
 
 Dòng `#11` còn đặc biệt hơn: nó là lần chạy của chính commit dựng nên pipeline, tức lần đầu tiên workflow chạy trên `main`.
 Nó ở đây để chứng minh các trường trích được thật, không phải để vào phép so sánh.
 
-Cả năm cũng đều có cột `Hoàn tất staging` rỗng, vì chúng chạy trước khi #12 thêm job triển khai.
+Năm dòng đầu còn có cột `Hoàn tất staging` rỗng, vì chúng chạy trước khi #12 thêm job triển khai.
 Chúng vì vậy không dùng được cho đại lượng `staging` của mục "Công thức", kể cả khi về sau muốn gom mẫu.
+Đại lượng ấy hiện có đúng một mẫu, là dòng `#12` với 68 giây.
 
 Mẫu đo thật của Giai đoạn pipeline chỉ bắt đầu khi có thay đổi chạm `services/` đi qua chuỗi đầy đủ, và chuỗi đó chưa đầy đủ cho tới #13.
 
