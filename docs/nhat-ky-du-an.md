@@ -2125,3 +2125,137 @@ Việc đang làm ngay sau mục này là **#77**, tức báo cáo A2, dàn ý s
 #77 đã hết blocker sau khi #14 đóng.
 
 Hai yêu cầu còn nợ từ Giai đoạn thủ công vẫn nguyên và vẫn chưa ticket nào nhận: cần ít nhất một thay đổi chạm `infra/postgres/init.sql`, và cần một thay đổi chạm `services/` đi qua chuỗi đầy đủ.
+
+## 2026-07-30 - Ba tài liệu cho ba người đọc, và lần thứ năm một tài liệu tự lệch
+
+### Ticket đòi cái gì
+
+#77 đòi ba sản phẩm: báo cáo A2, dàn ý slide, và kịch bản thuyết trình.
+Trước ticket này hai trong ba sản phẩm của A2 không tồn tại ở bất kỳ đâu, không trong kho mã, không trên đĩa, không trên Drive.
+Rubric cho ô "Báo cáo & trình bày" 20%, nên riêng chỗ trống ấy đã là một phần năm điểm; nhưng chỗ nặng hơn là 80% còn lại chỉ đến được tay giám khảo **thông qua** báo cáo và bài nói.
+Kiến trúc, pipeline, bốn ADR và toàn bộ Số liệu mốc đều đã tồn tại và đã được nghiệm thu, mà không ai chấm được một kho mã bằng cách đọc kho mã.
+
+Ticket đóng qua pull request #81, commit `2bc8df8`.
+
+### Ba tài liệu, ba người đọc, và vì sao không gộp hai cái sau
+
+Đây là quyết định dễ bị coi là thẩm mỹ, nên lý do phải ghi ra: nó là lý do về công cụ.
+
+Chủ đồ án dựng slide bằng NotebookLM hoặc Kimi, và chất lượng đầu ra của loại công cụ ấy phụ thuộc gần như hoàn toàn vào việc đầu vào đã chia sẵn theo slide hay chưa.
+Nạp một báo cáo văn xuôi thì công cụ phải tự đoán đâu là một slide, và nó thường cắt theo tiêu đề rồi nhồi cả đoạn vào một slide.
+Nên `docs/dan-y-slide.md` viết cho công cụ chứ không cho người: một slide một tiêu đề kèm bốn tới năm gạch đầu dòng, số đã rút gọn sẵn thành dạng nói được, và không một câu văn hoàn chỉnh nào.
+
+`docs/kich-ban-noi.md` tách ra thành file riêng đúng vì điều trên.
+Một file có sẵn câu hoàn chỉnh mà nạp vào công cụ sinh slide thì công cụ sẽ đưa nguyên câu lên slide, tức phá đúng thứ mà dàn ý được viết để tránh.
+Cả hai file đều mang một câu ở đầu nói rõ file nào được nạp và file nào không, vì ràng buộc này chỉ tồn tại trong đầu người viết chứ không có gì kiểm được nó.
+
+### Báo cáo sống trong kho mã, và bản `.docx` là sản phẩm dẫn xuất
+
+Nguồn sự thật là `docs/bao-cao-a2.md`; `tools/bao-cao-sang-docx.py` sinh `bao-cao-a2.docx` ở gốc kho để đếm trang thật và xuất PDF.
+
+Hai lý do, và cả hai đều cụ thể chứ không phải sở thích định dạng.
+Thứ nhất, mỗi con số báo cáo trích trỏ được về một file nguồn ở cùng kho, và `CONTEXT.md` cấm giữ bản sao thứ hai của cùng một con số; nên báo cáo phải là chỗ **trích** số kèm đường trỏ, không phải chỗ chép lại số.
+Thứ hai, một báo cáo về Configuration Management mà bản thân nó không được quản lý cấu hình là chỗ tự mâu thuẫn.
+
+Bản `.docx` vì vậy không được commit, và `.gitignore` nhận nó cùng với hai thứ đi kèm mà lần đầu bị bỏ sót: file chủ sở hữu `~$*.docx` mà Word tạo bên cạnh một `.docx` đang mở, và `__pycache__/` vì kho mã giờ có một file Python.
+Cả hai đang nằm untracked ở gốc kho chờ một lần `git add -A`, đúng như bản `.docx` từng chờ trước khi ticket này bắt đầu.
+
+### Cấu trúc báo cáo phải cân hai ràng buộc kéo ngược nhau
+
+`docs/adr/0001-chon-chuong-25-lam-de-tai-a2.md` cam kết phủ đủ bốn mục 25.1 tới 25.4, nhưng Rubric lại chấm theo năm tiêu chí khác, trong đó ô Kiến trúc 25% không thuộc mục nào của Chương 25.
+
+Cách giải là một cấu trúc hợp nhất tám mục.
+Nửa đầu đi theo kiến trúc Hệ thống demo rồi bốn mục con mang **đúng tên** 25.1 tới 25.4, để giám khảo có chỗ đối chiếu với sách và để cam kết trong ADR không bị phá.
+Nửa sau đi theo thiết kế thí nghiệm và kết quả đo, để Luận điểm có chỗ liền mạch mà triển khai.
+Bốn mục con mang tên sách là quyết định có chủ đích, không phải thói quen đặt tiêu đề.
+
+### Bốn phần của mục 3, thêm sau khi đọc lại bản nháp đầu
+
+Bốn mục con của mục 3 đi theo cùng một cấu trúc bốn phần: nguyên lý mà chương đưa ra, yêu cầu kỹ thuật rút ra từ nguyên lý ấy, cách đồ án hiện thực hoá, rồi kết quả và cái giá phải trả.
+
+Cấu trúc này thêm **sau** khi bản nháp đầu đã viết xong, và lý do là đọc lại thấy nó chỉ trả lời được "nhóm đã làm gì" chứ không trả lời được "vì sao phải làm như vậy".
+Hai phần sau đã có sẵn trong bản nháp và chỉ cần sắp lại; hai phần đầu là phần viết mới, và chúng cố ý ngắn vì chúng chỉ cần đủ để phần sau có chỗ neo, không nhằm chép lại sách.
+Cấu trúc chỉ áp cho bốn mục con của mục 3: mục 2 là kiến trúc và mục 4 là thiết kế thí nghiệm, cả hai không có nguyên lý nào của Chương 25 tương ứng, nên ép khuôn lên chúng sẽ sinh ra những đoạn lý thuyết viết cho đủ chỗ.
+
+### Lần thứ năm một tài liệu tự lệch, và nó xảy ra trên chính tài liệu nói về hiện tượng đó
+
+Mục 3.3 của báo cáo đếm được bốn lần một thứ mô tả hệ thống tự lệch khỏi hệ thống sau một thay đổi.
+Trong lúc rà nghiệm thu chính báo cáo ấy thì lần thứ năm lộ ra, cùng hình dạng.
+
+Comment thứ nhất của #77 sửa ô nghiệm thu về số trang, từ "khoảng 12 tới 15" thành "ít nhất 12", vì khoảng của đề cương là mức tối thiểu chứ không phải trần.
+Nhưng docstring của `tools/bao-cao-sang-docx.py` vẫn bảo người dùng siết báo cáo về khoảng cũ, tức bảo siết một báo cáo 16 trang đã đạt.
+Tiêu chí đổi, hướng dẫn dùng công cụ không đổi theo, và không có gì báo động vì cả hai câu đều đọc hợp lý khi đứng một mình.
+
+Điểm khác so với bốn lần trước đáng ghi lại.
+Bốn lần kia, thứ lệch là một định nghĩa số đo hoặc một câu mô tả quy trình.
+Lần này thứ lệch là **hướng dẫn dùng một công cụ**, và nó lệch khỏi một tiêu chí nghiệm thu chứ không khỏi một hệ thống, nên nó nằm ở một tầng mà không ai nghĩ tới khi đi tìm chỗ lệch.
+
+Báo cáo cố ý **không** sửa thành "năm lần".
+Bảng bốn dòng ở mục 3.3, slide 10 và phần kịch bản tương ứng đều đã chốt, nên đổi con số sát ngày nộp là sửa ba file để mua một chỗ không ai hỏi.
+Đây là chỗ đúng để ghi nó, và ghi ở đây thì nó vẫn là vật liệu dùng được nếu phần hỏi đáp đi tới đó.
+
+### Ba chỗ mà việc nghiệm thu bắt được, và loại lỗi của từng chỗ
+
+Ticket quyết định **không** thêm công cụ kiểm nào, và nghiệm thu bằng đối chiếu tay theo một danh sách mười ba ô.
+Một script trích mọi con số rồi đối chiếu với file nguồn là hình dung được, nhưng nó là công cụ mới cho đúng một tài liệu, phải bảo trì, mà cái nó bắt được thì đọc mắt cũng bắt được trên 16 trang.
+
+Quyết định ấy được kiểm chứng: hai ô nặng nhất của danh sách bắt được hai chỗ thật.
+Con số 20 test ở mục 6.3 không có câu trỏ nguồn, giờ trỏ về mục nhật ký của #12.
+Mục 3.4 dẫn đặc tả semver mà không chỗ nào trong chuỗi trích nó, kể cả `docs/quy-tac-phien-ban.md`, nên `semver.org` được ghi vào danh sách nguồn ngoài ở mục 6.4.
+
+Nhưng review tự động trên pull request #81 bắt được một chỗ mà đọc mắt **không** bắt, và loại lỗi ấy đáng ghi lại.
+Khối lệnh của chặng demo thứ nhất dùng chỗ giữ chỗ dạng dấu ngoặc nhọn, mà dấu ngoặc nhọn là toán tử chuyển hướng của shell, nên dán vào terminal là lỗi ngay.
+Nó đọc hoàn toàn hợp lý trên trang và chỉ hỏng lúc thực thi, tức đúng loại lỗi mà một cổng gác tự động bắt được còn một lượt đọc thì không; và chỗ nó hỏng là chặng duy nhất có thao tác thật trước mặt giám khảo.
+
+Review cũng chỉ ra một khẳng định quá mức ở mục 3.2.
+Báo cáo viết "ba image nền đều ghim tới phiên bản nhỏ" ngay dưới một yêu cầu đòi phiên bản **xác định**, nhưng `node:24-alpine` là tag di động chứ không phải digest, nên hai mức ghim trong cùng một câu không mạnh bằng nhau.
+Chỗ đó được nói rõ ở báo cáo, slide 7, kịch bản và hỏi đáp số 8.
+Đề xuất kèm theo là ghim theo digest, và nó bị từ chối: nó đổi `Dockerfile`, tức thêm một biến vào giữa một giai đoạn đang đo, mà #77 không xây gì cho pipeline.
+
+### Phần demo dựa vào chứng cứ đã tồn tại
+
+Bốn chặng: Hệ thống demo thật trên prod, trang Actions với một lần chạy xanh đủ ba job, trang Releases với `v0.1.0` và changelog tự sinh, rồi một đoạn đi ngược chuỗi truy vết từ bản phát hành về commit, về pull request, về issue và các tiêu chí đã tick.
+
+Chặng thứ tư là chặng mạnh nhất và cũng là chặng không thể hỏng, vì nó chỉ đọc dữ liệu tĩnh.
+Chạy pipeline trực tiếp bị loại vì nó cần runner tự quản còn sống, phải chờ hơn hai phút theo bảng so sánh của chính báo cáo, và có thể đỏ vì lý do không liên quan tới đồ án như mạng hoặc GHCR.
+Kịch bản còn ghi sẵn cách xử lý nếu prod không lên: bỏ chặng một và nói thẳng là bỏ, vì ba chặng còn lại không phụ thuộc nó.
+
+### Số liệu
+
+`docs/bao-cao-a2.md`: tám mục, bốn mục con mang tên 25.1 tới 25.4, mỗi mục con đủ bốn phần.
+Bản `.docx` sau khi sửa review: 10748 từ, số ước mà script in ra là 17,0 trang.
+Lần đếm thật gần nhất là **16 trang**, đo trong Word trên bản trước khi sửa review, lúc đó số ước là 16,8; bản sau chưa đếm lại.
+Mô hình đếm dòng của script vì vậy lệch chưa tới một trang trên bản này, và số ước vẫn chỉ dùng để biết cần siết hay nới chứ không dùng để nghiệm thu.
+
+`docs/dan-y-slide.md`: 22 slide, nằm trong khoảng 18 tới 22 mà ticket đòi.
+`docs/kich-ban-noi.md`: phần nói theo 22 slide, bốn chặng demo, và chín câu hỏi đáp, tức nhiều hơn sáu câu mà ticket liệt kê.
+Ba câu thêm là về việc không có ai review pull request, về chỗ lệch digest, và về vì sao Docker Compose chứ không Kubernetes.
+
+Mười ba ô nghiệm thu đều tick.
+Review tự động nêu bốn chỗ; nhận ba chỗ nguyên vẹn và một chỗ nhận phần chẩn đoán mà từ chối phần đề xuất.
+
+### Dẫn chứng
+
+- Ba tài liệu: `docs/bao-cao-a2.md`, `docs/dan-y-slide.md`, `docs/kich-ban-noi.md`
+- Công cụ sinh bản `.docx`, kèm giới hạn cú pháp Markdown mà nó hiểu: `tools/bao-cao-sang-docx.py`
+- Cấu trúc báo cáo đã chốt, danh sách nghiệm thu, và lý do không thêm công cụ kiểm: mục Implementation Decisions và Testing Decisions của #77
+- Lý do sửa ô nghiệm thu về số trang giữa chừng ticket: comment thứ nhất trên #77
+- Bốn chỗ review bắt được và cách xử lý từng chỗ: pull request #81
+- Bốn lần tài liệu tự lệch trước lần này: mục 3.3 của `docs/bao-cao-a2.md`, và mục "2026-07-29 - Đóng Giai đoạn thủ công, và cái giá của việc chốt một định nghĩa muộn" cùng mục "2026-07-29 - Staging tự cập nhật, và một cột mốc suýt đổi nghĩa mà không ai biết" của file này
+
+### Đang ở đâu sau mục này
+
+**Phần thuộc kho mã của A2 đã xong.**
+Ba sản phẩm nộp là báo cáo, ứng dụng chạy được và bài thuyết trình; hai cái đầu đã tồn tại và nghiệm thu được, còn cái thứ ba giờ đã có đủ vật liệu.
+
+Việc còn lại trước buổi thuyết trình ngày 2026-07-31 **không thuộc kho mã** và không ticket nào nhận, vì chúng là thao tác của chủ đồ án chứ không phải thay đổi lên hệ thống.
+Nạp `docs/dan-y-slide.md` vào NotebookLM hoặc Kimi để dựng slide, và tuyệt đối không nạp `docs/kich-ban-noi.md` vào cùng chỗ.
+Xuất PDF từ `bao-cao-a2.docx` bằng Word, và đếm lại số trang thật của bản đã sửa review.
+Dựng prod lên rồi chạy thử ba lệnh của chặng demo thứ nhất trước khi vào phòng.
+Tập nói ít nhất một lượt thành tiếng, vì kịch bản viết theo mốc 15 phút mà đề cương không ghi thời lượng, nên mốc ấy là giả định chứ không phải số biết trước.
+
+Nhóm C còn đúng **#13**, và nó vẫn đã hết blocker.
+Nó đóng nốt chuỗi, làm lead time của Giai đoạn pipeline tính được lần đầu, xoá hẳn ràng buộc nhắc triển khai prod bằng tay trong `CLAUDE.md`, và là chỗ tự nhiên để sửa luôn chỗ lệch digest.
+Nếu nó xong trước buổi nói thì mục 6.3 và mục 7 của báo cáo phải sửa theo, vì cả hai đang nói rằng ô lead time còn trống.
+
+Hai yêu cầu còn nợ từ Giai đoạn thủ công vẫn nguyên và vẫn chưa ticket nào nhận: cần ít nhất một thay đổi chạm `infra/postgres/init.sql`, và cần một thay đổi chạm `services/` đi qua chuỗi đầy đủ.
