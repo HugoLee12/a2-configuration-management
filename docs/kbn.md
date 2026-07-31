@@ -137,7 +137,7 @@ Bẫy của con số đầu: trung vị được chọn thay vì trung bình vì
 Bẫy của con số hai: bốn mươi phần trăm nghe như hệ rất tệ, nhưng cả hai lần hỏng đều truy về đúng một nguyên nhân, quên một bước xoá dữ liệu cũ khi đổi cấu trúc database, và trong năm thay đổi chỉ đúng một thay đổi có đổi cấu trúc database.
 Bẫy của con số ba: sự cố sáu mươi lăm phút đó không làm sập cả hệ, đúng như kiến trúc đã nói ở slide 2, `stats` nằm ngoài đường phục vụ request nên tạo link và chuyển hướng vẫn chạy bình thường, chỉ số lượt truy cập đứng yên.
 
-*(Bảng neo, tra khi luyện nói, không đọc nguyên văn trên sân khấu; nguồn `docs/so-lieu-giai-doan-thu-cong.md`.)*
+*(Bảng neo; nguồn `docs/so-lieu-giai-doan-thu-cong.md`.)*
 
 Năm mẫu của Giai đoạn thủ công, đơn vị phút:
 
@@ -157,7 +157,7 @@ Ba khúc, đọc nhanh: khoảng chờ sau merge thì làm tay hai phút còn pi
 Rút gọn thành một câu: cái pipeline xoá không phải thời gian làm việc, mà là việc phải có người ngồi chờ rảnh tay để gõ lệnh, và việc con người phải tự quyết có xoá dữ liệu cũ hay không trước mỗi lần triển khai, đúng cái quyết định mà một lần sai đã gây ra sự cố sáu mươi lăm phút ở phần một.
 Phần hỏi đáp mổ xẻ kỹ hơn ba ý này nếu được hỏi tới, ở đây em dừng ở mức đọc bảng.
 
-*(Bảng neo, tra khi luyện nói; nguồn `docs/nhat-ky-pipeline.md`, mục "Sáu dòng đầu không phải mẫu đo của giai đoạn".)*
+*(Bảng neo; nguồn `docs/nhat-ky-pipeline.md`, mục "Sáu dòng đầu không phải mẫu đo của giai đoạn".)*
 
 So sánh theo khúc, Giai đoạn thủ công so sáu lần chạy CI/CD đã có (gồm cả #12 là lần duy nhất có cột staging; không lần nào trong sáu lần này là thay đổi nghiệp vụ, nên bảng dưới đọc như chi phí vận hành sơ bộ chứ không phải mẫu đo chính thức):
 
@@ -276,9 +276,6 @@ Nếu lần chạy mới nhất không có đủ ba job, chọn lần chạy xan
 
 Chỉ lần lượt vào `kiem-tra`, `dong-goi` và `trien-khai-staging`.
 Nói: "Đây là ba chặng nối tiếp nhau: kiểm tra kiểu, lint, dựng stack và test qua nginx; chỉ khi chặng đó xanh mới đóng gói image; rồi staging kéo đúng image vừa đóng gói và chạy smoke test."
-
-Mở `trien-khai-staging` và cuộn tới bước `Smoke test qua nginx`.
-Chỉ vào dấu xanh của bước này và nói: "Đây là nghiệm thu sau triển khai, không phải chỉ là build xong."
 
 Chuyển tiếp: "Khi hệ thống đã được build và test xanh như vậy, bước tiếp theo là đóng gói nó lại để phát hành cho người dùng. Dấu vết này được lưu ở trang Releases."
 
