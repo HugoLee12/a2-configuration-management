@@ -21,3 +21,6 @@ coverage/
 .env
 .env.*
 !.env.example
+docs/kbn.md
+Quantifying_Configuration_Management_and_DevOps.pptx
+~*Quantifying_Configuration_Management_and_DevOps.pptx
